@@ -157,8 +157,9 @@ fun PtrPickerSheet(selected: String, onSelect: (String) -> Unit, onDismiss: () -
             Text(stringResource(active.caption), style = MaterialTheme.typography.bodySmall, color = cs.onPrimaryContainer.copy(.8f))
         }
     }
+    val shapesTitle = stringResource(R.string.pixel_expressive_shapes); val charactersTitle = stringResource(R.string.pixel_pixel_characters)
     LazyVerticalGrid(GridCells.Fixed(3), Modifier.heightIn(max = 560.dp), contentPadding = PaddingValues(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(stringResource(R.string.pixel_expressive_shapes) to PTR.filter { !it.pixel }, stringResource(R.string.pixel_pixel_characters) to PTR.filter { it.pixel }).forEach { (title, list) ->
+        listOf(shapesTitle to PTR.filter { !it.pixel }, charactersTitle to PTR.filter { it.pixel }).forEach { (title, list) ->
             item(title, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 Text(title, Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = cs.primary)
             }

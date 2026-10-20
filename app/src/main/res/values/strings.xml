@@ -1357,4 +1357,5 @@
     <string name="wirelessadb_6_digit_pairing_code">6-digit pairing code</string>
     <string name="apptracker_install_app">Install App</string>
     <string name="apptracker_failed_to_retrieve_upload_url">Failed to retrieve upload URL</string>
+    <string name="community_previously">Previously</string>
 </resources>

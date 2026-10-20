@@ -867,7 +867,7 @@ private fun CloudBackup(vm: MainViewModel, s: Settings) = Section(stringResource
         if (runCatching { ctx.contentResolver.takePersistableUriPermission(u, rw) }.isFailure) { vm.error(ctx.getString(R.string.settings_that_storage_app_does_not_allow)); return@launch }
         vm.set { it.copy(cloudBackupUri = u.toString(), cloudBackupEvery = it.cloudBackupEvery.takeIf { e -> e != "off" } ?: "week") }; vm.cloudBackup(true)
     }
-    SRow(Sym.Cloud, if (uri == null) stringResource(R.string.settings_connect_a_cloud) else stringResource(R.string.settings_backing_up_to, where), if (uri == null) stringResource(R.string.settings_google_drive_onedrive_proton_drive_or) else stringResource(R.string.settings_tap_to_pick_another_file), onClick = ::connect) { Chevron() }
+    SRow(Sym.Cloud, if (uri == null) stringResource(R.string.settings_connect_a_cloud) else stringResource(R.string.settings_backing_up_to, where.orEmpty()), if (uri == null) stringResource(R.string.settings_google_drive_onedrive_proton_drive_or) else stringResource(R.string.settings_tap_to_pick_another_file), onClick = ::connect) { Chevron() }
     if (uri != null) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).horizontalScroll(rememberScrollState()).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("off" to "Off", "day" to "Daily", "week" to "Weekly", "month" to "Monthly").forEach { (id, label) -> Choice(s.cloudBackupEvery == id, label) { vm.set { it.copy(cloudBackupEvery = id) } } }

@@ -362,7 +362,7 @@ fun AdDonationSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         NextBoss(streak)
                         prev?.let { p ->
                             Surface(shape = RoundedCornerShape(20.dp), color = cs.surfaceContainerHigh) {
-                                ListItem({ Text(p.title, fontWeight = FontWeight.SemiBold) }, overlineContent = { Text("Previously") }, leadingContent = { Blob(p.icon, p.color, 40) },
+                                ListItem({ Text(stringResource(p.title), fontWeight = FontWeight.SemiBold) }, overlineContent = { Text(stringResource(R.string.community_previously)) }, leadingContent = { Blob(p.icon, p.color, 40) },
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent))
                             }
                         }
@@ -869,7 +869,7 @@ fun CustomBundleSheet(vm: MainViewModel, onDismiss: () -> Unit) = OrionSheet(onD
                         }
                     }
                 }
-                AppPickerList(pool, platform, selected = picked.toSet(), status = { v, f -> stringResource(R.string.community_showing_of_max_24, v, f) }) { a ->
+                AppPickerList(pool, platform, selected = picked.toSet(), status = { v, f -> ctx.getString(R.string.community_showing_of_max_24, v, f) }) { a ->
                     picked = if (a.id in picked) picked - a.id else if (picked.size < 24) picked + a.id else picked; vm.haptic(H.SELECTION)
                 }
             }
