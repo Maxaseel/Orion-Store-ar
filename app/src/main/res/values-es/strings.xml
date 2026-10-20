@@ -36,12 +36,12 @@
     <string name="about_hide_token">Hide token</string>
     <string name="about_it_s_quiet_too_quiet">It\'s quiet... too quiet.</string>
     <string name="about_join_the_legends">Join the Legends</string>
-    <string name="about_ko_fi_upi_or_paypal">Ko-fi, UPI or PayPal</string>
+    <string name="about_ko_fi_upi_or_paypal">Ko-fi, UPI o PayPal</string>
     <string name="about_let_s_keep_it_family_friendly">Let\'s keep it family friendly!</string>
-    <string name="about_local_mode">Local Mode</string>
+    <string name="about_local_mode">Modo Local</string>
     <string name="about_lvl">Lvl %1$s</string>
     <string name="about_made_with_for_geeks">Made with 💜 for Geeks</string>
-    <string name="about_name_too_long_max_15_chars">Name too long (Max 15 chars)</string>
+    <string name="about_name_too_long_max_15_chars">El nombre es muy largo (Máximo 15 caracteres)</string>
     <string name="about_name_too_short_min_3_chars">Name too short (Min 3 chars)</string>
     <string name="about_need_5_contributions">Need 5 Contributions</string>
     <string name="about_no_token_set_rate_limited">No Token Set (Rate Limited)</string>
