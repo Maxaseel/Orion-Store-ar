@@ -509,7 +509,7 @@ fun SettingsScreen(vm: MainViewModel) {
                         Section(stringResource(R.string.settings_language)) {
                             val lctx = LocalContext.current
                             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).horizontalScroll(rememberScrollState()).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("" to stringResource(R.string.settings_language_system_default), "en" to "English", "es" to "Español").forEach { (tag, label) ->
+                                listOf("" to stringResource(R.string.settings_language_system_default), "en" to "English", "es" to "Español", "zh-CN" to "简体中文", "ja" to "日本語", "ru" to "Русский", "hi" to "हिन्दी", "ar" to "العربية", "tl" to "Tagalog", "fr" to "Français").forEach { (tag, label) ->
                                     Choice(Lang.tag(lctx) == tag, label) { Lang.set(lctx, tag); if (android.os.Build.VERSION.SDK_INT < 33) lctx.findActivity()?.recreate() }
                                 }
                             }
