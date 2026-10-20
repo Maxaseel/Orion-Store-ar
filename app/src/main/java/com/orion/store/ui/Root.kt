@@ -40,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
@@ -114,7 +115,7 @@ private fun Home(vm: MainViewModel) {
                         enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut()) {
                         ExtendedFloatingActionButton({ vm.batchCleanup() }, containerColor = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer) {
                             Icon(Sym.CleaningServices, null); Spacer(Modifier.width(12.dp))
-                            Column { Text("${d.pendingCleanup.size} files", fontWeight = FontWeight.Bold); Text("Tap to clean", style = MaterialTheme.typography.labelSmall) }
+                            Column { Text(stringResource(R.string.root_files, d.pendingCleanup.size), fontWeight = FontWeight.Bold); Text(stringResource(R.string.root_tap_to_clean), style = MaterialTheme.typography.labelSmall) }
                         }
                     }
                 },
@@ -189,10 +190,10 @@ fun Header(vm: MainViewModel) {
             } else SearchPill(vm, subtitle)
         }
         AnimatedVisibility(vm.storeUpdateAvailable) {
-            FilledTonalIconButton({ vm.fBypassed = false; vm.loadApps(true) }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.SystemUpdate, "Store update") }
+            FilledTonalIconButton({ vm.fBypassed = false; vm.loadApps(true) }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.SystemUpdate, stringResource(R.string.root_store_update)) }
         }
         if (Device.isTv) TvBetaPill(vm)
-        if (vm.tab == Tab.ABOUT) IconButton({ vm.haptic(H.LIGHT); vm.open(Overlay.GUIDE) }) { Icon(Sym.MenuBook, "Know Orion") }
+        if (vm.tab == Tab.ABOUT) IconButton({ vm.haptic(H.LIGHT); vm.open(Overlay.GUIDE) }) { Icon(Sym.MenuBook, stringResource(R.string.guide_know_orion)) }
         val dl = d.activeDownloads.size; val up = vm.updates.size
         IconButton({ vm.openSettings() }) {
             BadgedBox({
@@ -220,13 +221,13 @@ private fun TvBetaPill(vm: MainViewModel) {
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Surface({ open = true; vm.haptic(H.LIGHT) }, Modifier.padding(end = 4.dp).focusRing(src, Pill), shape = Pill, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer, interactionSource = src) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Sym.Tv, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("TV · Beta", style = MaterialTheme.typography.labelLargeEmphasized)
+            Icon(Sym.Tv, null, Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.root_tv_beta), style = MaterialTheme.typography.labelLargeEmphasized)
         }
     }
-    if (open) AlertDialog({ open = false }, icon = { Icon(Sym.Tv, null) }, title = { Text("Orion on TV is in beta") },
-        text = { Text("Browse with your remote, and install TV and Android apps right on this TV. A few screens are still made for touch. If something feels off, report it and it gets fixed.") },
-        confirmButton = { TextButton({ open = false; vm.tracker.open(TV_BUG_URL) }) { Text("Report a TV bug") } },
-        dismissButton = { TextButton({ open = false }) { Text("Got it") } })
+    if (open) AlertDialog({ open = false }, icon = { Icon(Sym.Tv, null) }, title = { Text(stringResource(R.string.root_orion_on_tv_is_in_beta)) },
+        text = { Text(stringResource(R.string.root_browse_with_your_remote_and_install)) },
+        confirmButton = { TextButton({ open = false; vm.tracker.open(TV_BUG_URL) }) { Text(stringResource(R.string.root_report_a_tv_bug)) } },
+        dismissButton = { TextButton({ open = false }) { Text(stringResource(R.string.root_got_it)) } })
 }
 
 private const val TV_BUG_URL = "https://github.com/RookieEnough/Orion-Store/issues/new?title=%5BTV%20beta%5D%20&body=TV%20model%3A%20%0AAndroid%20TV%20version%3A%20%0AWhat%20happened%3A%20"
@@ -235,7 +236,7 @@ private const val TV_BUG_URL = "https://github.com/RookieEnough/Orion-Store/issu
 private fun Logo(vm: MainViewModel) {
     val cs = MaterialTheme.colorScheme
     Box(Modifier.size(40.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(cs.primary).clickable(onClick = vm::titleClick), contentAlignment = Alignment.Center) {
-        Icon(painterResource(R.drawable.ic_splash_logo), "Orion Store", Modifier.size(40.dp), tint = cs.onPrimary)
+        Icon(painterResource(R.drawable.ic_splash_logo), stringResource(R.string.vm_orion_store), Modifier.size(40.dp), tint = cs.onPrimary)
     }
 }
 
@@ -252,17 +253,17 @@ private fun SearchPill(vm: MainViewModel, scope: String) {
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface), cursorBrush = SolidColor(cs.primary),
             decorationBox = { field ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (q.isEmpty()) Text(if (lib) "Search my apps" else "Search $scope", style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    if (q.isEmpty()) Text(if (lib) stringResource(R.string.root_search_my_apps) else stringResource(R.string.root_search, scope), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     field()
                 }
             })
         AnimatedContent(q.isNotEmpty(), label = "trail") { typing ->
-            if (typing) IconButton({ set("") }) { Icon(Sym.Close, "Clear search") }
+            if (typing) IconButton({ set("") }) { Icon(Sym.Close, stringResource(R.string.guide_clear_search)) }
             else Row {
                 AnnouncementButton(vm)
                 val at = remember { mutableStateOf(Offset.Zero) }; val reveal = LocalThemeReveal.current
                 IconButton({ reveal?.run(at.value) { vm.toggleTheme() } ?: vm.toggleTheme() }, Modifier.trackCenter(at)) {
-                    AnimatedContent(s.theme, label = "theme") { Icon(when (it) { "light" -> Sym.LightMode; "dusk" -> Sym.Brightness6; else -> Sym.DarkMode }, "Theme: $it, tap to change") }
+                    AnimatedContent(s.theme, label = "theme") { Icon(when (it) { "light" -> Sym.LightMode; "dusk" -> Sym.Brightness6; else -> Sym.DarkMode }, stringResource(R.string.root_theme_tap_to_change, it)) }
                 }
             }
         }
@@ -283,11 +284,11 @@ private fun AnnouncementButton(vm: MainViewModel) {
     TooltipBox(
         TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below, 8.dp),
         tooltip = {
-            RichTooltip(title = { Text("From the Orion team") }, caretShape = TooltipDefaults.caretShape(),
+            RichTooltip(title = { Text(stringResource(R.string.root_from_the_orion_team)) }, caretShape = TooltipDefaults.caretShape(),
                 action = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton({ tip.dismiss() }) { Text("Later") }
-                        if (unread) TextButton({ vm.dismissAnnouncement(); vm.haptic(H.SELECTION); tip.dismiss() }) { Text("Got it") }
+                        if (unread) TextButton({ vm.dismissAnnouncement(); vm.haptic(H.SELECTION); tip.dismiss() }) { Text(stringResource(R.string.root_got_it)) }
                     }
                 },
                 colors = TooltipDefaults.richTooltipColors(containerColor = cs.secondaryContainer, contentColor = cs.onSecondaryContainer,
@@ -352,9 +353,9 @@ private fun GuidePromptDialog(vm: MainViewModel) {
     fun done(open: Boolean) { vm.guidePrompt = false; vm.setFlag("guide", STORE_VERSION); if (open) { vm.haptic(H.SUCCESS); vm.open(Overlay.GUIDE) } }
     AlertDialog({ done(false) },
         icon = { MorphBlob(listOf(MaterialShapes.Cookie9Sided, MaterialShapes.Sunny), 0, 64.dp, cs.primaryContainer) { Icon(Sym.MenuBook, null, Modifier.size(30.dp), tint = cs.onPrimaryContainer) } },
-        title = { Text("Get to know Orion", style = MaterialTheme.typography.headlineSmallEmphasized) },
-        text = { Text("Every feature now lives in one field guide: backups, compact mode, XP and badges, the Hall of Fame, the Dino run and the rest. You can always find it on the Dev tab.") },
-        confirmButton = { Button({ done(true) }, shapes = ButtonDefaults.shapes()) { Text("Show me") } },
+        title = { Text(stringResource(R.string.root_get_to_know_orion), style = MaterialTheme.typography.headlineSmallEmphasized) },
+        text = { Text(stringResource(R.string.root_every_feature_now_lives_in_one)) },
+        confirmButton = { Button({ done(true) }, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.root_show_me)) } },
         dismissButton = { TextButton({ done(false) }) { Text("Later") } })
 }
 
@@ -363,18 +364,18 @@ private fun GuidePromptDialog(vm: MainViewModel) {
 private fun AutoReportDialog(vm: MainViewModel, log: List<AutoResult>) {
     val failed = log.filter { !it.ok }; val ok = log.filter { it.ok }
     AlertDialog(vm::dismissAutoReport, icon = { Icon(Sym.SystemUpdate, null) },
-        title = { Text(if (failed.size == 1) "1 update needs you" else "${failed.size} updates need you") },
+        title = { Text(if (failed.size == 1) stringResource(R.string.root_1_update_needs_you) else stringResource(R.string.root_updates_need_you, failed.size)) },
         text = {
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (ok.isNotEmpty()) Text("Updated in the background: ${ok.joinToString { it.name }}.", style = MaterialTheme.typography.bodyMedium)
+                if (ok.isNotEmpty()) Text(stringResource(R.string.root_updated_in_the_background, ok.joinToString { it.name }), style = MaterialTheme.typography.bodyMedium)
                 failed.forEach { r ->
                     Column {
                         Text("${r.name} ${r.version}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Text(r.error ?: "Install failed.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(r.error ?: stringResource(R.string.autoupdate_install_failed), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         },
-        confirmButton = { TextButton({ vm.dismissAutoReport(); vm.openSettings("queue") }) { Text("Open queue") } },
+        confirmButton = { TextButton({ vm.dismissAutoReport(); vm.openSettings("queue") }) { Text(stringResource(R.string.root_open_queue)) } },
         dismissButton = { TextButton(vm::dismissAutoReport) { Text("Later") } })
 }

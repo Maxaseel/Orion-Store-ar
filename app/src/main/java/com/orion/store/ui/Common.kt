@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.orion.store.R
 import com.orion.store.data.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.geometry.Offset
@@ -52,6 +53,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.border
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import coil3.imageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -266,10 +268,10 @@ fun statusText(app: AppItem): Pair<String, Color>? {
     val (st, p) = cardState(app); val cs = MaterialTheme.colorScheme
     val local = LocalS.current.installedVersions[app.id]
     return when (st) {
-        CardState.DOWNLOADING -> (if (p > 0f) "Downloading ${p.toInt()}%" else "Starting download") to cs.primary
-        CardState.READY -> "Ready to install" to cs.primary
-        CardState.UPDATE -> "Update · v${preferredVersion(app, LocalS.current.streamOf(app.id)).removePrefix("v")}" to cs.tertiary
-        CardState.INSTALLED -> "Installed · v${local.orEmpty().removePrefix("v")}" to cs.onSurfaceVariant
+        CardState.DOWNLOADING -> (if (p > 0f) stringResource(R.string.common_downloading, p.toInt()) else stringResource(R.string.common_starting_download)) to cs.primary
+        CardState.READY -> stringResource(R.string.logic_ready_to_install) to cs.primary
+        CardState.UPDATE -> stringResource(R.string.common_update_v, preferredVersion(app, LocalS.current.streamOf(app.id)).removePrefix("v")) to cs.tertiary
+        CardState.INSTALLED -> stringResource(R.string.common_installed_v, local.orEmpty().removePrefix("v")) to cs.onSurfaceVariant
         CardState.NONE -> null
     }
 }
@@ -283,7 +285,7 @@ fun SectionTitle(title: String, modifier: Modifier = Modifier, subtitle: String?
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
         action?.invoke()
-        onMore?.let { FilledTonalIconButton(it, shapes = IconButtonDefaults.shapes()) { Icon(Sym.ArrowForward, "See all $title") } }
+        onMore?.let { FilledTonalIconButton(it, shapes = IconButtonDefaults.shapes()) { Icon(Sym.ArrowForward, stringResource(R.string.common_see_all, title)) } }
     }
 
 @Composable

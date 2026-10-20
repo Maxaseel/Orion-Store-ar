@@ -29,6 +29,7 @@ import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.orion.store.MainActivity
+import com.orion.store.R
 import com.orion.store.AutoUpdate
 import com.orion.store.data.*
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -223,14 +224,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     fun error(msg: String) = toast(msg, 6000)
-    fun installToast(app: AppItem, file: String) = toast("${app.name} is ready to install", 6000, "Install") { installFile(app, file) }
+    fun installToast(app: AppItem, file: String) = toast(ctx.getString(R.string.vm_is_ready_to_install, app.name), 6000, "Install") { installFile(app, file) }
     // endregion
 
     // region startup
     private fun startup() = viewModelScope.launch {
         withContext(Dispatchers.IO) {
             val nm = NotificationManagerCompat.from(ctx)
-            nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_updates", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Orion Updates").build())
+            nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_updates", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName(ctx.getString(R.string.autoupdate_orion_updates)).build())
             nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_cleanup", NotificationManagerCompat.IMPORTANCE_HIGH).setName("Cleanup").build())
             DownloadService.ensureChannel(ctx)
         }
@@ -239,7 +240,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val now = now(); val del = d.pendingCleanup.filter { (_, e) -> s.deleteApk || now - e.timestamp > ONE_WEEK_MS }
         if (del.isEmpty()) return@launch
         val n = del.count { (id, e) -> purgeApk(id, e.fileName) }
-        if (n > 0) queue { toast("Janitor cleaned $n files") }
+        if (n > 0) queue { toast(ctx.getString(R.string.vm_janitor_cleaned_files, n)) }
     }
 
     private fun migrateWeb(st: String?, dt: String?) {
@@ -315,7 +316,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         takeTurn {
             val log = s.autoLog
             if (log.any { !it.ok }) autoReport = log
-            else if (log.isNotEmpty()) { set { it.copy(autoLog = emptyList()) }; toast(if (log.size == 1) "${log[0].name} was updated in the background" else "${log.size} apps were updated in the background") }
+            else if (log.isNotEmpty()) { set { it.copy(autoLog = emptyList()) }; toast(if (log.size == 1) ctx.getString(R.string.vm_was_updated_in_the_background, log[0].name) else ctx.getString(R.string.vm_apps_were_updated_in_the_background, log.size)) }
         }
         reporting = false
     }
@@ -329,23 +330,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val st = s; val every = mapOf("day" to 1L, "week" to 7L, "month" to 30L)[st.cloudBackupEvery]?.times(86_400_000L)
         if (st.cloudBackupUri.isEmpty() || !force && (every == null || now() - st.lastCloudBackup < every)) return@launch
         runCatching { withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(st.cloudBackupUri.toUri(), "wt")!!.use { it.write(identityExport(st, d.favorites, now()).toByteArray()) } } }
-            .onSuccess { set { it.copy(lastCloudBackup = now()) }; if (force) { toast("Identity backed up"); haptic(H.SUCCESS) } }
-            .onFailure { if (force) error("Cloud backup failed. Pick the backup file again in Settings › Backup.") else if (!cloudWarned) { cloudWarned = true; queue { error("Cloud backup failed. Pick the backup file again in Settings › Backup.") } } }
+            .onSuccess { set { it.copy(lastCloudBackup = now()) }; if (force) { toast(ctx.getString(R.string.vm_identity_backed_up)); haptic(H.SUCCESS) } }
+            .onFailure { if (force) error(ctx.getString(R.string.vm_cloud_backup_failed_pick_the_backup)) else if (!cloudWarned) { cloudWarned = true; queue { error(ctx.getString(R.string.vm_cloud_backup_failed_pick_the_backup)) } } }
     }
 
     /** Root: makes Orion the installer of catalog apps installed from elsewhere, so their updates land silently here. */
     fun adoptApps() = viewModelScope.launch {
         val owned = s.resolvedPackageNames.filterKeys { it in s.installedVersions }.values
         val foreign = withContext(Dispatchers.IO) { tracker.foreignInstalls(owned) }
-        if (foreign.isEmpty()) { toast("Orion already updates every catalog app you have"); return@launch }
-        toast("Adopting ${foreign.size} apps...", 60_000)
+        if (foreign.isEmpty()) { toast(ctx.getString(R.string.vm_orion_already_updates_every_catalog_app)); return@launch }
+        toast(ctx.getString(R.string.vm_adopting_apps, foreign.size), 60_000)
         val failed = foreign.keys.count { runCatching { tracker.adopt(it) }.isFailure }
         haptic(if (failed == 0) H.SUCCESS else H.WARNING)
-        toast(if (failed == 0) "Orion now updates ${foreign.size} more apps" else "Adopted ${foreign.size - failed}, $failed failed (signature or split mismatch)", 6000)
+        toast(if (failed == 0) ctx.getString(R.string.vm_orion_now_updates_more_apps, foreign.size) else ctx.getString(R.string.vm_adopted_failed_signature_or_split_mismatch, foreign.size - failed, failed), 6000)
     }
 
     fun trimCaches() = viewModelScope.launch {
-        runCatching { tracker.trimCaches() }.onSuccess { toast("App caches cleared"); haptic(H.SUCCESS) }.onFailure { error(it.message ?: "Trim failed") }
+        runCatching { tracker.trimCaches() }.onSuccess { toast(ctx.getString(R.string.vm_app_caches_cleared)); haptic(H.SUCCESS) }.onFailure { error(it.message ?: ctx.getString(R.string.vm_trim_failed)) }
     }
     // endregion
 
@@ -375,7 +376,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             process(r.rawApps, r.mirror)
             if (r.config != null) CatalogCache(d.apps, r.config, r.source).let { c -> launch(Dispatchers.IO) { runCatching { repo.saveCache(c) } } }
         } catch (e: Exception) {
-            if (d.apps.isEmpty()) { error("Failed to load apps"); clearConfigState(); if (st.devConfigEnabled) { devStatus = "error"; devError = e.message ?: "Failed to load developer config." }; haptic(H.ERROR) }
+            if (d.apps.isEmpty()) { error(ctx.getString(R.string.vm_failed_to_load_apps)); clearConfigState(); if (st.devConfigEnabled) { devStatus = "error"; devError = e.message ?: ctx.getString(R.string.vm_failed_to_load_developer_config) }; haptic(H.ERROR) }
             loading = false; refreshing = false
         }
     }
@@ -417,22 +418,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val cur = s.forcedStoreUpdate
         if (canResumeForcedUpdate(cur, STORE_VERSION, latest, c.minStoreVersion) && cur != null) {
             if (cur.downloadCompleted && Downloads.file(cur.downloadFileName)?.exists() != true) {
-                fStatus = "download_failed"; fError = "Previously downloaded file not found. Please retry."; return
+                fStatus = "download_failed"; fError = ctx.getString(R.string.vm_previously_downloaded_file_not_found_please); return
             }
             fStatus = if (cur.status == "export_ready") "export_ready".also { fExportPath = "" } else "ready_to_scan_or_install"
-            fText = "The Orion update is already downloaded."; return
+            fText = ctx.getString(R.string.vm_the_orion_update_is_already_downloaded); return
         }
         set { it.copy(forcedStoreUpdate = ForcedSnapshot(targetVersion = latest, downloadFileName = forcedStoreFileName(latest), status = "downloading", downloadCompleted = false, exported = false)) }
-        fStatus = "downloading"; fText = "Downloading the latest Orion build..."; forcedDownload()
+        fStatus = "downloading"; fText = ctx.getString(R.string.vm_downloading_the_latest_orion_build); forcedDownload()
     }
 
     private fun forcedDownload() {
         forcedJob?.cancel()
         forcedJob = viewModelScope.launch {
             val name = s.forcedStoreUpdate?.downloadFileName ?: return@launch
-            if (forcedUrl.isEmpty()) { fStatus = "download_failed"; fError = "No download URL found for this update."; return@launch }
+            if (forcedUrl.isEmpty()) { fStatus = "download_failed"; fError = ctx.getString(R.string.vm_no_download_url_found_for_this); return@launch }
             fError = ""; fProgress = 0
-            if (runCatching { Downloads.start(forcedUrl, name) }.isFailure) { fStatus = "download_failed"; fError = "Download failed. Check your connection and retry."; return@launch }
+            if (runCatching { Downloads.start(forcedUrl, name) }.isFailure) { fStatus = "download_failed"; fError = ctx.getString(R.string.vm_download_failed_check_your_connection_and); return@launch }
             while (true) {
                 delay(800)
                 val dl = Downloads.status(name); fProgress = dl.progress
@@ -440,8 +441,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 Downloads.forget(name)
                 if (dl.status == DlStatus.SUCCESSFUL) {
                     snap { it.copy(status = "ready_to_scan_or_install", downloadCompleted = true) }
-                    fStatus = "ready_to_scan_or_install"; fText = "Download complete."; fProgress = 100; haptic(H.SUCCESS)
-                } else { fStatus = "download_failed"; fError = "Download failed. Check your connection and retry."; haptic(H.ERROR) }
+                    fStatus = "ready_to_scan_or_install"; fText = ctx.getString(R.string.vm_download_complete); fProgress = 100; haptic(H.SUCCESS)
+                } else { fStatus = "download_failed"; fError = ctx.getString(R.string.vm_download_failed_check_your_connection_and); haptic(H.ERROR) }
                 return@launch
             }
         }
@@ -455,13 +456,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun forcedRetryDownload() {
         fError = ""; fProgress = 0; fResult = null
         snap { it.copy(status = "downloading", downloadCompleted = false) }
-        fStatus = "downloading"; fText = "Retrying download..."; forcedDownload()
+        fStatus = "downloading"; fText = ctx.getString(R.string.vm_retrying_download); forcedDownload()
     }
 
     fun forcedInstall() = viewModelScope.launch {
-        val sn = forcedSnapshot() ?: run { fError = "Update package metadata is missing. Retry the download, then install again."; return@launch }
-        fError = ""; fText = "Opening installer..."
-        if (!tracker.canRequestInstalls()) { fError = "Grant install permission, then tap Install Now again."; runCatching { ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; return@launch }
+        val sn = forcedSnapshot() ?: run { fError = ctx.getString(R.string.vm_update_package_metadata_is_missing_retry); return@launch }
+        fError = ""; fText = ctx.getString(R.string.vm_opening_installer)
+        if (!tracker.canRequestInstalls()) { fError = ctx.getString(R.string.vm_grant_install_permission_then_tap_install); runCatching { ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }; return@launch }
         fStatus = "installing"; snap { it.copy(status = "installing") }
         try {
             tracker.install(sn.downloadFileName, s.installerPreference, s.installerPackage)
@@ -469,7 +470,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             snap { it.copy(status = "installed") }; fStatus = "installed"; haptic(H.SUCCESS)
         } catch (e: Exception) {
             fStatus = "install_failed"; snap { it.copy(status = "install_failed") }
-            fError = if (e.message?.contains("CANCELED") == true) "Install cancelled. Save the APK to install it manually." else "Install failed. Save the APK to install it manually."
+            fError = if (e.message?.contains("CANCELED") == true) ctx.getString(R.string.vm_install_cancelled_save_the_apk_to) else ctx.getString(R.string.vm_install_failed_save_the_apk_to)
             haptic(H.ERROR)
         }
     }
@@ -480,20 +481,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         try {
             fExportPath = tracker.exportFile(sn.downloadFileName)
             snap { it.copy(status = "install_failed", exported = true) }
-            fError = ""; fText = "Saved to your downloads folder."; haptic(H.SUCCESS)
-        } catch (e: Exception) { fError = e.message ?: "Export failed. Try again." }
+            fError = ""; fText = ctx.getString(R.string.vm_saved_to_your_downloads_folder); haptic(H.SUCCESS)
+        } catch (e: Exception) { fError = e.message ?: ctx.getString(R.string.vm_export_failed_try_again) }
     }
 
     fun forcedScan(key: String = s.virusTotalApiKey) {
-        if (key.isBlank()) { pendingScanAfterKey = true; fStatus = "byok_required"; fText = "Add your VirusTotal API key below, then scan the update."; return }
+        if (key.isBlank()) { pendingScanAfterKey = true; fStatus = "byok_required"; fText = ctx.getString(R.string.vm_add_your_virustotal_api_key_below); return }
         pendingScanAfterKey = false
         val sn = forcedSnapshot()
-        val target = if (sn?.downloadCompleted == true) ScanTarget(ScanTargetType.DOWNLOADED_APK, "Downloaded update", sn.downloadFileName) else ScanTarget(ScanTargetType.REMOTE_APK, "Update package", forcedUrl)
-        fStatus = "scanning"; fText = "Scanning the APK with VirusTotal."; fError = ""
+        val target = if (sn?.downloadCompleted == true) ScanTarget(ScanTargetType.DOWNLOADED_APK, ctx.getString(R.string.vm_downloaded_update), sn.downloadFileName) else ScanTarget(ScanTargetType.REMOTE_APK, ctx.getString(R.string.vm_update_package), forcedUrl)
+        fStatus = "scanning"; fText = ctx.getString(R.string.vm_scanning_the_apk_with_virustotal); fError = ""
         viewModelScope.launch {
             val r = forcedVt.start(target, key, ::hapticStr)
-            if (r != null) { fResult = r; fStatus = "scan_complete"; fText = "Scan complete. Install whenever you are ready."; snap { it.copy(status = "scan_complete") } }
-            else { fStatus = "ready_to_scan_or_install"; fError = forcedVt.error.ifEmpty { "Scan failed. Try again." } }
+            if (r != null) { fResult = r; fStatus = "scan_complete"; fText = ctx.getString(R.string.vm_scan_complete_install_whenever_you_are); snap { it.copy(status = "scan_complete") } }
+            else { fStatus = "ready_to_scan_or_install"; fError = forcedVt.error.ifEmpty { ctx.getString(R.string.vm_scan_failed_try_again) } }
         }
     }
 
@@ -523,12 +524,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             set { it.copy(appStreams = it.appStreams + (app.id to meta.second)) }
             val target = url ?: app.variants.firstOrNull()?.url ?: app.downloadUrl
             if (target.isEmpty() || target == "#") return
-            if (s.wifiOnly && !onWifi()) { if (!auto) { error("Download blocked: WiFi Only mode."); haptic(H.ERROR) }; return }
+            if (s.wifiOnly && !onWifi()) { if (!auto) { error(ctx.getString(R.string.vm_download_blocked_wifi_only_mode)); haptic(H.ERROR) }; return }
             val safe = sanitizeDownloadUrl(target)
-            if (safe == "#") { if (!auto) { error("Download link is invalid or unsupported."); haptic(H.ERROR) }; return }
+            if (safe == "#") { if (!auto) { error(ctx.getString(R.string.vm_download_link_is_invalid_or_unsupported)); haptic(H.ERROR) }; return }
             val std = safe.lowercase().let { it.endsWith(".apk") || it.endsWith(".exe") || it.endsWith(".zip") }
             if (!app.installsHere()) { if (!auto && (std || app.platform == Platform.PC || app.platform == Platform.TV)) tracker.open(safe); return }
-            if (Downloads.dir().usableSpace < 64L * 1024 * 1024) { if (!auto) error("Not enough space on device!"); return }
+            if (Downloads.dir().usableSpace < 64L * 1024 * 1024) { if (!auto) error(ctx.getString(R.string.vm_not_enough_space_on_device)); return }
             val file = apkFileName(app, meta.first)
             val id = runCatching { Downloads.start(safe, file) }.getOrElse { if (!auto) tracker.open(safe); return }
             upd { it.startDownload(app.id, id, file) }; haptic(H.MEDIUM)
@@ -544,7 +545,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 DlStatus.FAILED -> {
                     Downloads.forget(file)
                     if (dl.progress > 90 && Downloads.status(file).status == DlStatus.SUCCESSFUL) downloadComplete(id, true)
-                    else { downloadComplete(id, false); error("Download Failed - Network Error") }
+                    else { downloadComplete(id, false); error(ctx.getString(R.string.vm_download_failed_network_error)) }
                 }
             }
         }
@@ -562,7 +563,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun notifyReady(app: AppItem, file: String) = runCatching {
         val i = Intent(ctx, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("appId", app.id).putExtra("fileName", file)
         NotificationManagerCompat.from(ctx).notify(app.id.hashCode(), NotificationCompat.Builder(ctx, "orion_updates").setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Download Complete").setContentText("${app.name} is ready to install.").setAutoCancel(true)
+            .setContentTitle(ctx.getString(R.string.vm_download_complete_2)).setContentText(ctx.getString(R.string.vm_is_ready_to_install_2, app.name)).setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(ctx, app.id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
     }
 
@@ -571,14 +572,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val ch = questChapter(s.adWatchCount); if (ch <= s.questChapterSeen) return
         set { it.copy(questChapterSeen = ch) }
         val nm = NotificationManagerCompat.from(ctx)
-        if (!nm.areNotificationsEnabled()) { queue { toast("New mission: Chapter 2 · The Forkening", 8000, "Play") { open(Overlay.AD_DONATION) } }; return }
-        nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_quest", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Fuel the Code missions").build())
+        if (!nm.areNotificationsEnabled()) { queue { toast(ctx.getString(R.string.vm_new_mission_chapter_2_the_forkening), 8000, "Play") { open(Overlay.AD_DONATION) } }; return }
+        nm.createNotificationChannel(NotificationChannelCompat.Builder("orion_quest", NotificationManagerCompat.IMPORTANCE_DEFAULT).setName(ctx.getString(R.string.vm_fuel_the_code_missions)).build())
         val i = Intent(ctx, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("open", "quest")
         runCatching {
             nm.notify(7320, NotificationCompat.Builder(ctx, "orion_quest").setSmallIcon(com.orion.store.R.drawable.ic_launcher_monochrome)
-                .setContentTitle("New mission unlocked: The Forkening").setAutoCancel(true)
-                .setStyle(NotificationCompat.BigTextStyle().bigText("Entropy's last breath split Orion into a thousand rogue forks. Chapter 2 of Fuel the Code is live, with three new bosses and three new badges."))
-                .setContentText("Chapter 2 of Fuel the Code is live.")
+                .setContentTitle(ctx.getString(R.string.vm_new_mission_unlocked_the_forkening)).setAutoCancel(true)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(ctx.getString(R.string.vm_entropy_s_last_breath_split_orion)))
+                .setContentText(ctx.getString(R.string.vm_chapter_2_of_fuel_the_code))
                 .setContentIntent(PendingIntent.getActivity(ctx, 7320, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
         }
     }
@@ -603,16 +604,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (apps.isEmpty()) return@launch
         haptic(H.MEDIUM)
         val eligible = apps.filter { st.installedVersions[it.id].isNullOrEmpty() }
-        if (eligible.isEmpty()) { toast("All apps from ${b.title} are already installed."); return@launch }
-        toast("Queueing ${eligible.size} apps from ${b.title}...")
+        if (eligible.isEmpty()) { toast(ctx.getString(R.string.vm_all_apps_from_are_already_installed, b.title)); return@launch }
+        toast(ctx.getString(R.string.vm_queueing_apps_from, eligible.size, b.title))
         var queued = 0; var skipped = apps.size - eligible.size
         for (a in eligible) {
             if (a.id in d.activeDownloads || a.id in d.readyToInstall || a.id in initializing) { skipped++; continue }
             runCatching { download(a, auto = true); queued++ }
             delay(180)
         }
-        if (queued > 0) { toast("Queued $queued apps from ${b.title}${if (skipped > 0) " ($skipped skipped)" else ""}."); haptic(H.SUCCESS) }
-        else toast("Everything in ${b.title} is already queued or installed.")
+        if (queued > 0) { toast(ctx.getString(R.string.vm_queued_apps_from, queued, b.title, if (skipped > 0) " ($skipped skipped)" else "") + "."); haptic(H.SUCCESS) }
+        else toast(ctx.getString(R.string.vm_everything_in_is_already_queued_or, b.title))
     }
 
     fun batchCleanup() = viewModelScope.launch {
@@ -620,7 +621,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val ids = d.pendingCleanup.keys.toList(); if (ids.isEmpty()) return@launch
         cleaning = true; haptic(H.HEAVY)
         val ok = ids.filter { id -> d.pendingCleanup[id]?.let { purgeApk(id, it.fileName) } == true }
-        if (ok.isNotEmpty()) { haptic(H.SUCCESS); toast("Cleaned ${ok.size} files") }
+        if (ok.isNotEmpty()) { haptic(H.SUCCESS); toast(ctx.getString(R.string.vm_cleaned_files, ok.size)) }
         cleaning = false
     }
     // endregion
@@ -635,22 +636,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (direct && !WirelessAdb.connected) {
             installingId = app.id
             val err = runCatching { WirelessAdb.connect(ctx) }.exceptionOrNull()
-            if (err != null) { installingId = null; toast(err.message ?: "Wireless debugging unreachable.", 8000, "Use installer") { installFile(app, file, true) }; return@launch }
+            if (err != null) { installingId = null; toast(err.message ?: ctx.getString(R.string.vm_wireless_debugging_unreachable), 8000, ctx.getString(R.string.vm_use_installer)) { installFile(app, file, true) }; return@launch }
         }
         val shizuku = !regular && !direct && (s.useShizuku || s.rootMode)
         if (!direct && !shizuku) try {
             if (!tracker.canRequestInstalls()) {
-                error("Please allow permission and return here"); pendingRetry = app to file
+                error(ctx.getString(R.string.vm_please_allow_permission_and_return_here)); pendingRetry = app to file
                 ctx.startActivity(tracker.installSettingsIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return@launch
             }
-        } catch (e: Exception) { error("Permission check failed. Cannot install."); return@launch }
+        } catch (e: Exception) { error(ctx.getString(R.string.vm_permission_check_failed_cannot_install)); return@launch }
         haptic(H.HEAVY); installingId = app.id
         if (k.isNotEmpty()) expectations[k] = InstallExpectation(app.id, meta.first)
         if (meta.second.isNotEmpty()) set { it.copy(appStreams = it.appStreams + (app.id to meta.second)) }
         try {
             when {
-                direct -> { WirelessAdb.install(ctx, tracker.resolve(file)); toast("Installed instantly") }
-                shizuku -> { tracker.installShizuku(file, s.updateLock); toast(if (s.rootMode) "Installed with root" else "Installed via Shizuku") }
+                direct -> { WirelessAdb.install(ctx, tracker.resolve(file)); toast(ctx.getString(R.string.vm_installed_instantly)) }
+                shizuku -> { tracker.installShizuku(file, s.updateLock); toast(if (s.rootMode) ctx.getString(R.string.vm_installed_with_root) else ctx.getString(R.string.vm_installed_via_shizuku)) }
                 else -> { tracker.install(file, s.installerPreference, if (s.installerPreference == "package") s.installerPackage else ""); snackbar.currentSnackbarData?.dismiss() }
             }
             beginVerify(app)
@@ -659,12 +660,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (!direct && !shizuku && ("INSTALL_CANCELED" in msg || "INSTALL_FAILED" in msg) && "INSTALL_FAILED_UPDATE_INCOMPATIBLE" !in msg && "INSTALL_PARSE_FAILED" !in msg) { beginVerify(app); return@launch }
             installingId = null; scanningId = null; expectations -= k
             when {
-                "CORRUPT" in msg || "PARSE_ERROR" in msg -> { error("File corrupted. Deleting..."); deleteReadyFile(app, file) }
+                "CORRUPT" in msg || "PARSE_ERROR" in msg -> { error(ctx.getString(R.string.vm_file_corrupted_deleting)); deleteReadyFile(app, file) }
                 "package appears to be invalid" in msg || "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in msg || "INSTALL_PARSE_FAILED" in msg ->
-                    error("Update failed: installed app is not compatible with this package. Reinstall may be required.")
-                direct -> error("Direct install failed: $msg")
-                shizuku || "Shizuku" in msg -> error("${if (s.rootMode) "Root" else "Shizuku"} install failed: $msg")
-                else -> error("Installation failed.")
+                    error(ctx.getString(R.string.vm_update_failed_installed_app_is_not))
+                direct -> error(ctx.getString(R.string.vm_direct_install_failed, msg))
+                shizuku || "Shizuku" in msg -> error(ctx.getString(R.string.vm_install_failed, if (s.rootMode) "Root" else "Shizuku", msg))
+                else -> error(ctx.getString(R.string.vm_installation_failed))
             }
         }
     }
@@ -683,7 +684,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 expectations -= k
                 d.readyToInstall[app.id]?.let { file ->
                     upd { it.recordInstalled(app.id, ver, file, now()).copy(readyToInstall = it.readyToInstall - app.id, pendingCleanup = if (app.id in it.pendingCleanup) it.pendingCleanup else it.pendingCleanup + (app.id to CleanupEntry(file, now()))) }
-                    if (s.deleteApk && purgeApk(app.id, file)) toast("Installed. APK deleted")
+                    if (s.deleteApk && purgeApk(app.id, file)) toast(ctx.getString(R.string.vm_installed_apk_deleted))
                 }
                 scanningId = null; return
             }
@@ -749,15 +750,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun batchInstall() = viewModelScope.launch {
         if (!s.useShizuku && !s.directInstall && !s.rootMode) return@launch
         val ready = d.readyToInstall; if (ready.isEmpty()) return@launch
-        haptic(H.HEAVY); toast("Updating ${ready.size} apps...")
+        haptic(H.HEAVY); toast(ctx.getString(R.string.vm_updating_apps, ready.size))
         for ((id, f) in ready) { lookup[id]?.let { installFile(it, f).join(); delay(1000) } }
-        toast("All updates completed."); haptic(H.SUCCESS)
+        toast(ctx.getString(R.string.vm_all_updates_completed)); haptic(H.SUCCESS)
     }
 
     fun exportApk(app: AppItem, file: String) = viewModelScope.launch {
         haptic(H.SELECTION)
-        try { tracker.exportFile(file); toast("Exported to Downloads"); haptic(H.SUCCESS); upd { it.copy(pendingCleanup = it.pendingCleanup - app.id) } }
-        catch (e: Exception) { error(e.message ?: "Export failed") }
+        try { tracker.exportFile(file); toast(ctx.getString(R.string.vm_exported_to_downloads)); haptic(H.SUCCESS); upd { it.copy(pendingCleanup = it.pendingCleanup - app.id) } }
+        catch (e: Exception) { error(e.message ?: ctx.getString(R.string.vm_export_failed)) }
     }
 
     /** Deletes a downloaded APK and forgets it everywhere it is tracked (ready, pending cleanup, library), so no screen offers it again.
@@ -777,7 +778,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteLibraryApk(app: AppItem) {
         val file = d.readyToInstall[app.id] ?: d.pendingCleanup[app.id]?.fileName ?: d.appLibrary[app.id]?.fileName
-        if (!purgeApk(app.id, file)) { error("APK could not be deleted."); return }
+        if (!purgeApk(app.id, file)) { error(ctx.getString(R.string.vm_apk_could_not_be_deleted)); return }
         if (file != null) { set { it.copy(lastRemoteVersions = it.lastRemoteVersions - app.id) }; haptic(H.SUCCESS) }
     }
     // endregion
@@ -803,7 +804,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (runCatching { ctx.getSystemService(ConnectivityManager::class.java).isActiveNetworkMetered }.getOrDefault(true)) return@launch
         prefetchShots(f.values.flatMap { (cols, _) -> cols.filter { it.type == CollectionType.HERO }.flatMap { c -> c.apps.flatMap { it.screenshots.take(2) } } }.distinct())
     }
-    private fun openById(id: String, miss: String = "not found") { lookup[id]?.let { selectApp(it) } ?: toast("App ‘$id’ $miss") }
+    private fun openById(id: String, miss: String = ctx.getString(R.string.vm_not_found)) { lookup[id]?.let { selectApp(it) } ?: toast(ctx.getString(R.string.vm_app, id, miss)) }
     fun navigateToApp(id: String) = openById(id)
     fun navigateFromSettings(id: String) { overlays -= Overlay.SETTINGS; viewModelScope.launch { delay(100); openById(id) } }
 
@@ -812,7 +813,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val seg = (listOfNotNull(uri.host) + uri.pathSegments).filter { it.isNotEmpty() }
         if (seg.getOrNull(0) != "app" || seg.getOrNull(1) == null) return
         val id = Uri.decode(seg[1])
-        whenLoaded { openById(id, "not found in Orion Store") }
+        whenLoaded { openById(id, ctx.getString(R.string.vm_not_found_in_orion_store)) }
     }
 
     /** "App details in store" from system App info. Prefers the catalog entry that installed it: forks can share a package name. */
@@ -820,7 +821,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val k = normalizePackageName(pkg)
         val id = s.packageOwners[k]?.takeIf { it in lookup }
             ?: allApps().firstOrNull { normalizePackageName(s.resolvedPackageNames[it.id] ?: it.packageName) == k }?.id
-        if (id != null) openById(id) else toast("This app isn't in Orion Store")
+        if (id != null) openById(id) else toast(ctx.getString(R.string.vm_this_app_isn_t_in_orion))
     }
 
     private fun whenLoaded(open: () -> Unit) { if (lookup.isEmpty()) pendingDeepLink = open else open() }
@@ -837,10 +838,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun titleClick() {
-        if (s.isDevUnlocked) { toast("Already a developer."); return }
+        if (s.isDevUnlocked) { toast(ctx.getString(R.string.vm_already_a_developer)); return }
         devClicks++; val left = 7 - devClicks
-        if (left in 1..4) { toast("You are $left steps away from being a developer."); haptic(H.LIGHT) }
-        if (devClicks >= 7) { set { it.withDevUnlocked(true) }; toast("You are now a developer!"); haptic(H.SUCCESS); devClicks = 0 }
+        if (left in 1..4) { toast(ctx.getString(R.string.vm_you_are_steps_away_from_being, left)); haptic(H.LIGHT) }
+        if (devClicks >= 7) { set { it.withDevUnlocked(true) }; toast(ctx.getString(R.string.vm_you_are_now_a_developer)); haptic(H.SUCCESS); devClicks = 0 }
     }
 
     fun profileClick(view: String? = null, index: Int? = null) {
@@ -918,7 +919,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val local = s.customBundles.map { cb -> BundleItem(cb.id, cb.title, cb.description, cb.appIds, cb.appIds.mapNotNull { id -> lookup[id]?.takeIf { it.platform == p } }, badge = "Local", icon = cb.icon) }.filter { it.apps.isNotEmpty() }
         if (local.isEmpty()) return withUpdates
         val idx = withUpdates.indexOfFirst { it.type == CollectionType.RECOMMENDATION_BUNDLES }
-        if (idx == -1) return injectAfterHero(withUpdates, StoreCollection("recommendation_bundles_local", "Recommended app bundles", CollectionType.RECOMMENDATION_BUNDLES, "Curated picks for your platform", bundles = local))
+        if (idx == -1) return injectAfterHero(withUpdates, StoreCollection("recommendation_bundles_local", ctx.getString(R.string.vm_recommended_app_bundles), CollectionType.RECOMMENDATION_BUNDLES, ctx.getString(R.string.vm_curated_picks_for_your_platform), bundles = local))
         return withUpdates.toMutableList().also { l -> val t = l[idx]; val ids = t.bundles.map { it.id }.toSet(); l[idx] = t.copy(bundles = t.bundles + local.filter { it.id !in ids }) }
     }
 

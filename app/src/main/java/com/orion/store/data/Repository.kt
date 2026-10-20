@@ -2,6 +2,7 @@ package com.orion.store.data
 
 import android.content.Context
 import androidx.core.util.AtomicFile
+import com.orion.store.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
 import java.io.File
@@ -63,7 +64,7 @@ class Repository(private val ctx: Context) {
     private fun bust(url: String, ts: String) = "$url${if ('?' in url) '&' else '?'}t=$ts"
 
     private suspend fun fetchSet(config: StoreConfig, appsFallback: String?, appsTs: String): Pair<JsonElement, JsonElement?> = coroutineScope {
-        val appsUrl = config.appsJsonUrl.ifEmpty { appsFallback ?: throw IOException("Dev config is missing appsJsonUrl.") }
+        val appsUrl = config.appsJsonUrl.ifEmpty { appsFallback ?: throw IOException(ctx.getString(R.string.repository_dev_config_is_missing_appsjsonurl)) }
         val mirrorUrl = config.mirrorJsonUrl?.ifEmpty { null } ?: Defaults.MIRROR_JSON
         val apps = async { Net.retry(bust(appsUrl, appsTs), 1, noStore = true) }
         val mirror = async { runCatching { json.parseToJsonElement(Net.retry(bust(mirrorUrl, appsTs), 1)) }.getOrNull() }
@@ -78,11 +79,11 @@ class Repository(private val ctx: Context) {
         var devError: String? = null
         if (useDev) {
             try {
-                val url = s.devConfigUrl.trim().ifEmpty { throw IOException("Enter a developer config URL before reloading.") }
-                val cfgText = try { Net.retry(bust(url, ts), 1, noStore = true) } catch (e: HttpError) { throw IOException("Dev config request failed with ${e.code}") }
+                val url = s.devConfigUrl.trim().ifEmpty { throw IOException(ctx.getString(R.string.repository_enter_a_developer_config_url_before)) }
+                val cfgText = try { Net.retry(bust(url, ts), 1, noStore = true) } catch (e: HttpError) { throw IOException(ctx.getString(R.string.repository_dev_config_request_failed_with, e.code)) }
                 val cfg = CatalogProcessor.parseConfig(cfgText)
-                if (cfg.appsJsonUrl.isEmpty()) throw IOException("Dev config is missing appsJsonUrl.")
-                val (apps, mirror) = try { fetchSet(cfg, null, appsTs) } catch (e: HttpError) { throw IOException("Dev apps request failed with ${e.code}") }
+                if (cfg.appsJsonUrl.isEmpty()) throw IOException(ctx.getString(R.string.repository_dev_config_is_missing_appsjsonurl))
+                val (apps, mirror) = try { fetchSet(cfg, null, appsTs) } catch (e: HttpError) { throw IOException(ctx.getString(R.string.repository_dev_apps_request_failed_with, e.code)) }
                 return CatalogLoad(apps, mirror, cfg, "Developer Config")
             } catch (e: Exception) { devError = e.message ?: "Failed to load developer config." }
         } else {

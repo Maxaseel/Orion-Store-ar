@@ -98,19 +98,19 @@ object AutoUpdate {
         val version = downloadVersionMeta(app, null, s.streamOf(app.id)).first
         fun result(ok: Boolean, error: String? = null) = AutoResult(app.id, app.name, version, ok, error, System.currentTimeMillis())
         val url = sanitizeDownloadUrl(app.variants.firstOrNull()?.url ?: app.downloadUrl)
-        if (url == "#" || !url.startsWith("http")) return result(false, "No direct APK download for this app.")
+        if (url == "#" || !url.startsWith("http")) return result(false, ctx.getString(R.string.autoupdate_no_direct_apk_download_for_this))
         val name = apkFileName(app, version)
-        val f = Downloads.file(name) ?: return result(false, "Invalid file name.")
+        val f = Downloads.file(name) ?: return result(false, ctx.getString(R.string.autoupdate_invalid_file_name))
         if (!f.exists() || f.length() == 0L) {
-            runCatching { Downloads.start(url, name) }.onFailure { return result(false, "Download could not start.") }
+            runCatching { Downloads.start(url, name) }.onFailure { return result(false, ctx.getString(R.string.autoupdate_download_could_not_start)) }
             val st = withTimeoutOrNull(20 * 60_000L) { Downloads.state.first { it[name]?.status != DlStatus.RUNNING } }?.get(name)?.status
             Downloads.forget(name)
-            if (st != DlStatus.SUCCESSFUL || Downloads.status(name).status != DlStatus.SUCCESSFUL) return result(false, "Download failed. Orion retries on its next pass.")
+            if (st != DlStatus.SUCCESSFUL || Downloads.status(name).status != DlStatus.SUCCESSFUL) return result(false, ctx.getString(R.string.autoupdate_download_failed_orion_retries_on_its))
         }
         // Never install something other than what is installed: a wrong or tampered file stops here
         val actual = withContext(Dispatchers.IO) { if (tracker.isValidApk(f)) tracker.archivePackage(f) else null }
-        if (actual == null) { f.delete(); return result(false, "The downloaded file is not a valid APK.") }
-        if (pkg.isNotEmpty() && actual != pkg) { f.delete(); return result(false, "The download is a different app ($actual), so it was not installed.") }
+        if (actual == null) { f.delete(); return result(false, ctx.getString(R.string.autoupdate_the_downloaded_file_is_not_a)) }
+        if (pkg.isNotEmpty() && actual != pkg) { f.delete(); return result(false, ctx.getString(R.string.autoupdate_the_download_is_a_different_app, actual)) }
         val now = System.currentTimeMillis()
         Store.data.update { if (app.id in it.readyToInstall) it else it.completeDownload(app.id, name, now) }
         if (!s.autoInstall) { notifyReady(ctx, app, name); return null }
@@ -127,23 +127,23 @@ object AutoUpdate {
 
     /** Null on success, else why it failed, worded for the user. */
     private suspend fun install(ctx: Context, tracker: AppTracker, s: Settings, f: File, pkg: String): String? {
-        if (s.rootMode || s.useShizuku) return runCatching { tracker.installShizuku(f.name, s.updateLock) }.exceptionOrNull()?.let { reason(it.message) }
-        if (Build.VERSION.SDK_INT < 31) return "Android ${Build.VERSION.RELEASE} needs you to confirm installs. Root or Shizuku make them silent."
-        if (!tracker.canRequestInstalls()) return "Allow Orion to install apps, then updates can install on their own."
+        if (s.rootMode || s.useShizuku) return runCatching { tracker.installShizuku(f.name, s.updateLock) }.exceptionOrNull()?.let { reason(ctx, it.message) }
+        if (Build.VERSION.SDK_INT < 31) return ctx.getString(R.string.autoupdate_android_needs_you_to_confirm_installs, Build.VERSION.RELEASE)
+        if (!tracker.canRequestInstalls()) return ctx.getString(R.string.autoupdate_allow_orion_to_install_apps_then)
         val (status, msg) = sessionInstall(ctx, f, pkg)
         return when (status) {
             PackageInstaller.STATUS_SUCCESS -> null
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> "Android asked to confirm this one. That happens for apps another store installed, or apps built for an old Android version."
-            else -> reason(msg)
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> ctx.getString(R.string.autoupdate_android_asked_to_confirm_this_one)
+            else -> reason(ctx, msg)
         }
     }
 
-    private fun reason(m: String?) = when {
-        m == null -> "Install failed."
-        "UPDATE_INCOMPATIBLE" in m || "signatures do not match" in m.lowercase() -> "This update is signed by a different developer than the installed app. Uninstall it first to switch."
-        "INSUFFICIENT_STORAGE" in m -> "Not enough storage to install."
-        "VERSION_DOWNGRADE" in m -> "The installed version is newer than the catalog."
-        "Shizuku" in m -> "Shizuku is not running, so the silent install could not happen."
+    private fun reason(ctx: Context, m: String?) = when {
+        m == null -> ctx.getString(R.string.autoupdate_install_failed)
+        "UPDATE_INCOMPATIBLE" in m || "signatures do not match" in m.lowercase() -> ctx.getString(R.string.autoupdate_this_update_is_signed_by_a)
+        "INSUFFICIENT_STORAGE" in m -> ctx.getString(R.string.autoupdate_not_enough_storage_to_install)
+        "VERSION_DOWNGRADE" in m -> ctx.getString(R.string.autoupdate_the_installed_version_is_newer_than)
+        "Shizuku" in m -> ctx.getString(R.string.autoupdate_shizuku_is_not_running_so_the)
         else -> m.take(160)
     }
 
@@ -163,7 +163,7 @@ object AutoUpdate {
                 val i = Intent(ctx, InstallReceiver::class.java).setPackage(ctx.packageName)
                 session.commit(PendingIntent.getBroadcast(ctx, id, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE).intentSender)
             }
-            withTimeoutOrNull(3 * 60_000L) { done.await() } ?: (PackageInstaller.STATUS_FAILURE to "Android did not answer in time. Orion retries on its next pass.")
+            withTimeoutOrNull(3 * 60_000L) { done.await() } ?: (PackageInstaller.STATUS_FAILURE to ctx.getString(R.string.autoupdate_android_did_not_answer_in_time))
         } catch (e: Exception) {
             runCatching { pi.abandonSession(id) }; PackageInstaller.STATUS_FAILURE to e.message
         } finally { sessions -= id }
@@ -178,15 +178,15 @@ object AutoUpdate {
     }
 
     private fun channel(ctx: Context) = NotificationManagerCompat.from(ctx).createNotificationChannel(
-        NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName("Orion Updates").build())
+        NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT).setName(ctx.getString(R.string.autoupdate_orion_updates)).build())
 
     /** Opens the app's page with the file ready, the same extras the store's own "ready" notification uses. */
     private fun notifyReady(ctx: Context, app: AppItem, file: String, error: String? = null) = runCatching {
         channel(ctx)
         val i = Intent(ctx, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("appId", app.id).putExtra("fileName", file)
         NotificationManagerCompat.from(ctx).notify(app.id.hashCode(), NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(if (error == null) "${app.name} update ready" else "${app.name} needs you").setContentText(error ?: "Tap to install.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText(error ?: "Tap to install.")).setAutoCancel(true)
+            .setContentTitle(if (error == null) ctx.getString(R.string.autoupdate_update_ready, app.name) else ctx.getString(R.string.autoupdate_needs_you, app.name)).setContentText(error ?: ctx.getString(R.string.autoupdate_tap_to_install))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(error ?: ctx.getString(R.string.autoupdate_tap_to_install))).setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(ctx, app.id.hashCode(), i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
     }
 
@@ -195,7 +195,7 @@ object AutoUpdate {
         channel(ctx)
         val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
         NotificationManagerCompat.from(ctx).notify(JOB_ID, NotificationCompat.Builder(ctx, CHANNEL).setSmallIcon(com.orion.store.R.drawable.ic_launcher_monochrome)
-            .setContentTitle(if (ok.size == 1) "${ok[0].name} updated" else "${ok.size} apps updated").setContentText(ok.joinToString { it.name }).setAutoCancel(true)
+            .setContentTitle(if (ok.size == 1) ctx.getString(R.string.autoupdate_updated, ok[0].name) else ctx.getString(R.string.autoupdate_apps_updated, ok.size)).setContentText(ok.joinToString { it.name }).setAutoCancel(true)
             .apply { launch?.let { setContentIntent(PendingIntent.getActivity(ctx, JOB_ID, it, PendingIntent.FLAG_IMMUTABLE)) } }.build())
     }
 }

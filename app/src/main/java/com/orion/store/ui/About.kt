@@ -1,6 +1,7 @@
 package com.orion.store.ui
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.orion.store.R
 import com.orion.store.data.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -128,7 +131,7 @@ private fun DevCoin(vm: MainViewModel, profile: DevProfile, slots: List<String>,
                     onError = { if (++stage == 2) deadImages += img })
             } else Column(Modifier.fillMaxSize().background(cs.tertiaryContainer), Arrangement.Center, Alignment.CenterHorizontally) {
                 Icon(Sym.EmojiEventsFilled, null, Modifier.size(40.dp), tint = cs.onTertiaryContainer)
-                Text("Hall of\nFame", textAlign = TextAlign.Center, style = MaterialTheme.typography.labelLargeEmphasized, color = cs.onTertiaryContainer)
+                Text(stringResource(R.string.about_hall_of_fame), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelLargeEmphasized, color = cs.onTertiaryContainer)
             }
         }
     }
@@ -144,7 +147,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
     LaunchedEffect(flipped) { if (flipped) { delay(6000); flipped = false } }
     LaunchedEffect(Unit) { if (s.coinFlipHintCount < 3) { delay(1600); flipped = true; vm.set { it.incrementCoinFlipHint() } } }
     val ads = s.adWatchCount
-    val (rankLabel, rankIcon) = QUEST_BOSSES.lastOrNull { ads >= it.lvl }?.let { "Rank: ${it.rank}" to (BADGES[it.badge]?.first ?: Sym.Shield) } ?: ("Start your journey" to Sym.RocketLaunch)
+    val (rankLabel, rankIcon) = QUEST_BOSSES.lastOrNull { ads >= it.lvl }?.let { stringResource(R.string.about_rank, it.rank) to (BADGES[it.badge]?.first ?: Sym.Shield) } ?: (stringResource(R.string.about_start_your_journey) to Sym.RocketLaunch)
     val slots = s.showcasedBadges.take(3)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = padding) {
         item("header") { Header(vm) }
@@ -152,7 +155,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
             Column(Modifier.fillMaxWidth().padding(top = 8.dp).reveal(0), horizontalAlignment = Alignment.CenterHorizontally) {
                 DevCoin(vm, profile, slots, flipped) { if (flipped) { leaderboard = true; vm.haptic(H.MEDIUM) } else { flipped = true; vm.haptic(H.SELECTION) } }
                 Text(profile.name, style = MaterialTheme.typography.displaySmallEmphasized)
-                Text(if (flipped) "Tap again for the Hall of Fame" else "Tap the coin to flip it", style = MaterialTheme.typography.labelMedium, color = cs.primary)
+                Text(if (flipped) stringResource(R.string.about_tap_again_for_the_hall_of) else stringResource(R.string.about_tap_the_coin_to_flip_it), style = MaterialTheme.typography.labelMedium, color = cs.primary)
                 Text(profile.bio, Modifier.padding(horizontal = 36.dp, vertical = 10.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
             }
         }
@@ -160,7 +163,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
             FlowRow(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 8.dp).reveal(1), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(8.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                 slots.forEachIndexed { i, id -> BadgeChip(id) { if (slots.size == 3) vm.profileClick("badges", i) } }
-                if (slots.size < 3) AssistChip({ vm.profileClick("badges", slots.size) }, { Text("Add badge") }, leadingIcon = { Icon(Sym.Add, null, Modifier.size(AssistChipDefaults.IconSize)) }, shape = Pill)
+                if (slots.size < 3) AssistChip({ vm.profileClick("badges", slots.size) }, { Text(stringResource(R.string.about_add_badge)) }, leadingIcon = { Icon(Sym.Add, null, Modifier.size(AssistChipDefaults.IconSize)) }, shape = Pill)
             }
         }
         item("connect") { Group("Connect", Modifier.reveal(2)) {
@@ -180,7 +183,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
                     }
             }
         } }
-        item("support") { Group("Support Orion", Modifier.reveal(3)) {
+        item("support") { Group(stringResource(R.string.about_support_orion), Modifier.reveal(3)) {
             val next = QUEST_BOSSES.firstOrNull { ads < it.lvl }?.let { it.lvl to it.rank }
             val (bg, fg) = tonal(Fuchsia)
             var shown by remember { mutableStateOf(false) }; LaunchedEffect(Unit) { shown = true }
@@ -190,28 +193,28 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
                     Box(Modifier.size(52.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(fg.copy(.14f)), contentAlignment = Alignment.Center) { Icon(rankIcon, null, tint = fg) }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Fuel the Code", style = MaterialTheme.typography.titleLargeEmphasized, color = fg)
+                        Text(stringResource(R.string.about_fuel_the_code), style = MaterialTheme.typography.titleLargeEmphasized, color = fg)
                         Text(rankLabel, style = MaterialTheme.typography.bodyMedium, color = fg.copy(.85f))
                     }
                     Icon(Sym.PlayArrow, null, tint = fg)
                 }
                 LinearWavyProgressIndicator({ prog }, Modifier.fillMaxWidth().padding(top = 16.dp), color = fg, trackColor = fg.copy(.2f))
-                Text(next?.let { "$ads watched · ${it.first - ads} more to ${it.second}" } ?: "$ads watched · every rank unlocked", Modifier.padding(top = 8.dp),
+                Text(next?.let { stringResource(R.string.about_watched_more_to, ads, it.first - ads, it.second) } ?: stringResource(R.string.about_watched_every_rank_unlocked, ads), Modifier.padding(top = 8.dp),
                     style = MaterialTheme.typography.labelMedium, color = fg.copy(.85f))
             }
             if (donation.kofiUrl != null || donation.upiId != null || donation.paypalUrl != null) Row(Modifier.fillMaxWidth().padding(top = 8.dp)
                 .springClick(RoundedCornerShape(28.dp)) { vm.donateOpen = true; vm.haptic(H.SELECTION) }.background(cs.surfaceContainerHigh).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 TonalIcon(Sym.Coffee, Caution); Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Buy me a coffee", style = MaterialTheme.typography.titleMedium)
-                    Text("Ko-fi, UPI or PayPal", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                    Text(stringResource(R.string.about_buy_me_a_coffee), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.about_ko_fi_upi_or_paypal), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                 }
                 Icon(Sym.ChevronRight, null)
             }
         } }
         item("help") { Group("Help", Modifier.reveal(4)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(Triple(Sym.HelpOutline, "FAQs", "Secrets & safety") to { vm.open(Overlay.FAQ) }, Triple(Sym.NewReleases, "What's new", "Release notes") to { vm.open(Overlay.RELEASE_NOTES) })
+                listOf(Triple(Sym.HelpOutline, "FAQs", stringResource(R.string.about_secrets_safety)) to { vm.open(Overlay.FAQ) }, Triple(Sym.NewReleases, stringResource(R.string.about_what_s_new), stringResource(R.string.about_release_notes)) to { vm.open(Overlay.RELEASE_NOTES) })
                     .forEach { (spec, go) ->
                         Column(Modifier.weight(1f).springClick(RoundedCornerShape(28.dp)) { vm.haptic(H.LIGHT); go() }.background(cs.surfaceContainerHigh).padding(18.dp)) {
                             TonalIcon(spec.first, cs.primary)
@@ -226,13 +229,13 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(shape = Pill, color = cs.surfaceContainerHigh) { Text("v$STORE_VERSION", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge) }
                     // The quiet RE mark: this build is the native rewrite of the web app
-                    Surface(shape = Pill, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer) { Text("RE · Native", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLargeEmphasized) }
+                    Surface(shape = Pill, color = cs.tertiaryContainer, contentColor = cs.onTertiaryContainer) { Text(stringResource(R.string.about_re_native), Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLargeEmphasized) }
                     val c = if (s.useRemoteJson) Safe else Caution
                     Surface(shape = Pill, color = tonal(c).first, contentColor = tonal(c).second) {
-                        Text("Source: ${if (s.useRemoteJson) "Remote" else "Local"}", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.about_source, if (s.useRemoteJson) "Remote" else "Local"), Modifier.padding(horizontal = 12.dp, vertical = 4.dp), style = MaterialTheme.typography.labelLarge)
                     }
                 }
-                Text("Made with 💜 for Geeks", Modifier.padding(top = 12.dp).clip(Pill).clickable { vm.profileClick() }.padding(horizontal = 16.dp, vertical = 8.dp),
+                Text(stringResource(R.string.about_made_with_for_geeks), Modifier.padding(top = 12.dp).clip(Pill).clickable { vm.profileClick() }.padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge, color = cs.onSurfaceVariant)
             }
         }
@@ -267,85 +270,85 @@ fun DevTools(vm: MainViewModel) {
     }
     fun save(t: String) { vm.set { it.copy(githubToken = t) }; editing = false; scope.launch { delay(500); vm.reload() } }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Developer tools", Modifier.padding(start = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleMediumEmphasized)
+        Text(stringResource(R.string.about_developer_tools), Modifier.padding(start = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleMediumEmphasized)
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("GitHub Access", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Text("Unlock 5000 requests/hr (Authenticated)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.about_github_access), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.about_unlock_5000_requests_hr_authenticated), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    TextButton({ editing = !editing; draft = s.githubToken }) { Text(if (editing) "Cancel" else "Edit Token") }
+                    TextButton({ editing = !editing; draft = s.githubToken }) { Text(if (editing) "Cancel" else stringResource(R.string.about_edit_token)) }
                 }
                 if (editing) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(draft, { draft = it }, Modifier.weight(1f), placeholder = { Text("ghp_...") }, singleLine = true, shape = RoundedCornerShape(16.dp),
                         visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { save(draft) }),
-                        trailingIcon = { IconButton({ show = !show }) { Icon(if (show) Sym.VisibilityOff else Sym.Visibility, if (show) "Hide token" else "Show token") } })
+                        trailingIcon = { IconButton({ show = !show }) { Icon(if (show) Sym.VisibilityOff else Sym.Visibility, if (show) stringResource(R.string.about_hide_token) else stringResource(R.string.about_show_token)) } })
                     Button({ save(draft) }, shapes = ButtonDefaults.shapes()) { Text("Save") }
                 } else Row(Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(if (s.githubToken.isNotEmpty()) Safe else MaterialTheme.colorScheme.error))
-                    Text(if (s.githubToken.isEmpty()) "No Token Set (Rate Limited)" else if (show) s.githubToken else "••••••••••••${s.githubToken.takeLast(4)}",
+                    Text(if (s.githubToken.isEmpty()) stringResource(R.string.about_no_token_set_rate_limited) else if (show) s.githubToken else "••••••••••••${s.githubToken.takeLast(4)}",
                         Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 14.dp), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (s.githubToken.isNotEmpty()) {
-                        IconButton({ show = !show }) { Icon(if (show) Sym.VisibilityOff else Sym.Visibility, if (show) "Hide token" else "Reveal token") }
-                        IconButton({ clip.setText(AnnotatedString(s.githubToken)) }) { Icon(Sym.ContentCopy, "Copy token") }
-                        IconButton({ save("") }) { Icon(Sym.DeleteOutline, "Remove token") }
+                        IconButton({ show = !show }) { Icon(if (show) Sym.VisibilityOff else Sym.Visibility, if (show) stringResource(R.string.about_hide_token) else stringResource(R.string.about_reveal_token)) }
+                        IconButton({ clip.setText(AnnotatedString(s.githubToken)) }) { Icon(Sym.ContentCopy, stringResource(R.string.about_copy_token)) }
+                        IconButton({ save("") }) { Icon(Sym.DeleteOutline, stringResource(R.string.about_remove_token)) }
                     }
                 }
             }
         }
-        Text("UI Debugger (Alignment Check)", Modifier.padding(start = 8.dp, top = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.about_ui_debugger_alignment_check), Modifier.padding(start = 8.dp, top = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton({ vm.allApps().firstOrNull()?.let { vm.installToast(it, "test.apk") } }) { Text("Toast: Install") }
-            OutlinedButton({ vm.error("This is a test error message for alignment checking.") }) { Text("Toast: Error") }
-            OutlinedButton({ val t = System.currentTimeMillis(); vm.upd { it.copy(pendingCleanup = mapOf("test-1" to CleanupEntry("a", t), "test-2" to CleanupEntry("b", t), "test-3" to CleanupEntry("c", t))) } }) { Text("Deck: Clean") }
-            OutlinedButton({ vm.set { it.copy(hasSeenModernUITutorial = false) }; vm.tour = false; vm.open(Overlay.TUTORIAL) }) { Text("Trigger: Try New UI") }
-            Button({ vm.forcedTest = "checking" }, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) { Text("TEST FORCED UPDATE") }
+            OutlinedButton({ vm.allApps().firstOrNull()?.let { vm.installToast(it, "test.apk") } }) { Text(stringResource(R.string.about_toast_install)) }
+            OutlinedButton({ vm.error(ctx.getString(R.string.about_this_is_a_test_error_message)) }) { Text(stringResource(R.string.about_toast_error)) }
+            OutlinedButton({ val t = System.currentTimeMillis(); vm.upd { it.copy(pendingCleanup = mapOf("test-1" to CleanupEntry("a", t), "test-2" to CleanupEntry("b", t), "test-3" to CleanupEntry("c", t))) } }) { Text(stringResource(R.string.about_deck_clean)) }
+            OutlinedButton({ vm.set { it.copy(hasSeenModernUITutorial = false) }; vm.tour = false; vm.open(Overlay.TUTORIAL) }) { Text(stringResource(R.string.about_trigger_try_new_ui)) }
+            Button({ vm.forcedTest = "checking" }, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.about_test_forced_update)) }
         }
         rate?.let { (limit, rem, reset) ->
             Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row { Text("GitHub API Quota", Modifier.weight(1f), style = MaterialTheme.typography.labelLarge); Text("$rem/$limit", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) }
+                    Row { Text(stringResource(R.string.about_github_api_quota), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge); Text("$rem/$limit", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) }
                     LinearProgressIndicator({ if (limit > 0) rem / limit.toFloat() else 0f }, Modifier.fillMaxWidth(), color = if (rem < limit * .2f) MaterialTheme.colorScheme.error else Safe)
-                    Row { Text(if (s.githubToken.isNotEmpty()) "Authenticated" else "Public IP", Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
-                        Text("Resets: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reset * 1000))}", style = MaterialTheme.typography.labelSmall) }
+                    Row { Text(if (s.githubToken.isNotEmpty()) "Authenticated" else stringResource(R.string.about_public_ip), Modifier.weight(1f), style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.about_resets, SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reset * 1000))), style = MaterialTheme.typography.labelSmall) }
                 }
             }
         }
-        Text("Package Detective", Modifier.padding(start = 8.dp, top = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.about_package_detective), Modifier.padding(start = 8.dp, top = 6.dp), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(pkg, { pkg = it }, Modifier.weight(1f), placeholder = { Text("com.example.app") }, singleLine = true, shape = RoundedCornerShape(16.dp))
             FilledIconButton({
                 if (pkg.isNotEmpty()) { pkgResult = "Checking..."; scope.launch {
-                    pkgResult = runCatching { withContext(Dispatchers.IO) { vm.tracker.appInfo(pkg.trim()) }.let { "{\n  \"installed\": ${it.installed},\n  \"version\": ${it.version?.let { v -> "\"$v\"" }},\n  \"versionCode\": ${it.versionCode}\n}" } }.getOrElse { "Error: ${it.message}" }
+                    pkgResult = runCatching { withContext(Dispatchers.IO) { vm.tracker.appInfo(pkg.trim()) }.let { "{\n  \"installed\": ${it.installed},\n  \"version\": ${it.version?.let { v -> "\"$v\"" }},\n  \"versionCode\": ${it.versionCode}\n}" } }.getOrElse { ctx.getString(R.string.about_error, it.message) }
                 } }
-            }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.Search, "Check package") }
+            }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.Search, stringResource(R.string.about_check_package)) }
         }
         if (pkgResult.isNotEmpty()) Code(pkgResult)
-        OutlinedButton({ showJson = !showJson }, Modifier.fillMaxWidth()) { Text("Raw Metadata Explorer", Modifier.weight(1f)); Icon(if (showJson) Sym.ExpandLess else Sym.ExpandMore, null) }
+        OutlinedButton({ showJson = !showJson }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.about_raw_metadata_explorer), Modifier.weight(1f)); Icon(if (showJson) Sym.ExpandLess else Sym.ExpandMore, null) }
         if (showJson) {
-            val raw = remember(d.apps) { if (d.apps.isEmpty()) "Cache Empty" else runCatching { Json(json) { prettyPrint = true }.encodeToString(ListSerializer(AppItem.serializer()), d.apps) }.getOrDefault("Error parsing cache") }
+            val raw = remember(d.apps) { if (d.apps.isEmpty()) ctx.getString(R.string.about_cache_empty) else runCatching { Json(json) { prettyPrint = true }.encodeToString(ListSerializer(AppItem.serializer()), d.apps) }.getOrDefault(ctx.getString(R.string.about_error_parsing_cache)) }
             Code(raw, Modifier.heightIn(max = 320.dp))
         }
         Row(Modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Active Mirror", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.about_active_mirror), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(vm.mirrorSource.ifEmpty { "Unknown" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
-            FilledTonalButton({ vm.set { it.copy(useRemoteJson = !it.useRemoteJson) } }, shapes = ButtonDefaults.shapes()) { Text(if (s.useRemoteJson) "Remote Mode" else "Local Mode") }
+            FilledTonalButton({ vm.set { it.copy(useRemoteJson = !it.useRemoteJson) } }, shapes = ButtonDefaults.shapes()) { Text(if (s.useRemoteJson) stringResource(R.string.about_remote_mode) else stringResource(R.string.about_local_mode)) }
         }
-        OutlinedButton({ vm.set { it.withDevUnlocked(false) }; vm.settingsMenu = "none"; vm.haptic(H.WARNING) }, Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("CLOSE DEVELOPER OPTIONS", fontWeight = FontWeight.Black) }
+        OutlinedButton({ vm.set { it.withDevUnlocked(false) }; vm.settingsMenu = "none"; vm.haptic(H.WARNING) }, Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text(stringResource(R.string.about_close_developer_options), fontWeight = FontWeight.Black) }
         Button(onNuke, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shapes = ButtonDefaults.shapes(), colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)) {
-            Icon(Sym.DeleteForever, null); Spacer(Modifier.width(8.dp)); Text("NUCLEAR RESET (Wipe & Restart)", fontWeight = FontWeight.Black)
+            Icon(Sym.DeleteForever, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.about_nuclear_reset_wipe_restart), fontWeight = FontWeight.Black)
         }
     }
-    if (nuke) AlertDialog({ nuke = false }, icon = { Icon(Sym.DeleteForever, null) }, title = { Text("Nuclear reset?") },
-        text = { Text("Clears every setting, cache and library record, then restarts Orion. Downloaded APK files stay on disk.") },
+    if (nuke) AlertDialog({ nuke = false }, icon = { Icon(Sym.DeleteForever, null) }, title = { Text(stringResource(R.string.about_nuclear_reset)) },
+        text = { Text(stringResource(R.string.about_clears_every_setting_cache_and_library)) },
         confirmButton = { Button({
             nuke = false; vm.set { Settings() }; vm.upd { DataState() }
             scope.launch { delay(700); ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)) }; exitProcess(0) }
-        }, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) { Text("Wipe & Restart") } },
+        }, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.about_wipe_restart)) } },
         dismissButton = { TextButton({ nuke = false }) { Text("Cancel") } })
 }
 
@@ -359,15 +362,15 @@ private fun Code(text: String, modifier: Modifier = Modifier) = SelectionContain
 fun DonationSheet(vm: MainViewModel, donation: DonationConfig, onDismiss: () -> Unit) {
     data class DRow(val key: String, val label: String, val helper: String, val value: String, val icon: ImageVector, val c: Color, val copy: String?, val open: String?)
     val rows = listOfNotNull(
-        donation.kofiUrl?.let { DRow("kofi", "Ko-fi", "Support Orion through Ko-fi", it, Sym.Coffee, Color(0xFF29ABE0), null, "Open Ko-fi") },
-        donation.upiId?.let { DRow("upi", "UPI", "Copy the UPI ID to pay from your app", it, Sym.QrCode2, Color(0xFF22C55E), "Copy UPI", null) },
-        donation.paypalUrl?.let { DRow("paypal", "PayPal", "Open PayPal or copy the payment link", it, Sym.Payments, Color(0xFF0070BA), "Copy PayPal", "Open PayPal") },
+        donation.kofiUrl?.let { DRow("kofi", "Ko-fi", stringResource(R.string.about_support_orion_through_ko_fi), it, Sym.Coffee, Color(0xFF29ABE0), null, stringResource(R.string.about_open_ko_fi)) },
+        donation.upiId?.let { DRow("upi", "UPI", stringResource(R.string.about_copy_the_upi_id_to_pay), it, Sym.QrCode2, Color(0xFF22C55E), stringResource(R.string.about_copy_upi), null) },
+        donation.paypalUrl?.let { DRow("paypal", "PayPal", stringResource(R.string.about_open_paypal_or_copy_the_payment), it, Sym.Payments, Color(0xFF0070BA), stringResource(R.string.about_copy_paypal), stringResource(R.string.about_open_paypal)) },
     )
     if (rows.isEmpty()) return
     val clip = LocalClipboardManager.current; val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf<String?>(null) }; var copied by remember { mutableStateOf<String?>(null) }
     OrionSheet(onDismiss) {
-        SheetTitle("Support Orion", Sym.Favorite, "Choose a payment method to support development.")
+        SheetTitle(stringResource(R.string.about_support_orion), Sym.Favorite, stringResource(R.string.about_choose_a_payment_method_to_support))
         rows.forEach { r ->
             Card({ open = if (open == r.key) null else r.key }, Modifier.padding(horizontal = 16.dp, vertical = 5.dp).fillMaxWidth(), shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(if (open == r.key) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {
@@ -403,20 +406,20 @@ fun LeaderboardSheet(vm: MainViewModel, onDismiss: () -> Unit, onSubmit: () -> U
     }
     val cooldown = s.lastSubmissionTime > 0 && System.currentTimeMillis() - s.lastSubmissionTime < 3_600_000
     OrionSheet(onDismiss) {
-        SheetTitle("Hall of Fame", Sym.EmojiEvents, "Global Top Contributors")
+        SheetTitle(stringResource(R.string.about_hall_of_fame_2), Sym.EmojiEvents, stringResource(R.string.about_global_top_contributors))
         Box(Modifier.fillMaxWidth().heightIn(min = 240.dp, max = 560.dp), contentAlignment = Alignment.Center) {
             val list = entries
             when {
                 error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Sym.WifiOff, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.error)
-                    Text("Signal Lost", Modifier.padding(8.dp), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.about_signal_lost), Modifier.padding(8.dp), style = MaterialTheme.typography.titleMedium)
                     FilledTonalButton({ nonce++ }) { Text("Reconnect") }
                 }
                 list == null -> ContainedLoadingIndicator()
                 list.isEmpty() -> Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("It's quiet... too quiet.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("The Hall of Fame is empty.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Be the first legend to rise!", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.about_it_s_quiet_too_quiet), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.about_the_hall_of_fame_is_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.about_be_the_first_legend_to_rise), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
                 else -> LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     itemsIndexed(list) { i, e ->
@@ -434,7 +437,7 @@ fun LeaderboardSheet(vm: MainViewModel, onDismiss: () -> Unit, onSubmit: () -> U
                                 }
                                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(e.`class`, Modifier.clip(RoundedCornerShape(6.dp)).background(cls.copy(.12f)).border(1.dp, cls.copy(.3f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 1.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = cls)
-                                    Text("Lvl ${e.level}", Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.about_lvl, e.level), Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             Column(horizontalAlignment = Alignment.End) {
@@ -447,19 +450,19 @@ fun LeaderboardSheet(vm: MainViewModel, onDismiss: () -> Unit, onSubmit: () -> U
             }
         }
         Button(onSubmit, modifier = Modifier.padding(16.dp).fillMaxWidth().heightIn(min = 56.dp), enabled = !cooldown, shapes = ButtonDefaults.shapes()) {
-            Icon(if (cooldown) Sym.Lock else Sym.RocketLaunch, null); Spacer(Modifier.width(8.dp)); Text(if (cooldown) "Rank Claimed (Wait 1h)" else "Claim Global Rank", fontWeight = FontWeight.Bold)
+            Icon(if (cooldown) Sym.Lock else Sym.RocketLaunch, null); Spacer(Modifier.width(8.dp)); Text(if (cooldown) stringResource(R.string.about_rank_claimed_wait_1h) else stringResource(R.string.about_claim_global_rank), fontWeight = FontWeight.Bold)
         }
-        Text("Rankings are synchronized every hour after user submission", Modifier.fillMaxWidth().padding(bottom = 8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.about_rankings_are_synchronized_every_hour_after), Modifier.fillMaxWidth().padding(bottom = 8.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-data class Avatar(val id: String, val name: String, val url: String)
+data class Avatar(val id: String, @StringRes val name: Int, val url: String)
 val CHARACTERS = listOf(
-    Avatar("ears1", "Imp", "https://api.dicebear.com/9.x/big-ears/svg?seed=Avery"), Avatar("pixel1", "8-Bit", "https://api.dicebear.com/9.x/pixel-art/svg?seed=Avery"),
-    Avatar("mecha", "Mecha", "https://api.dicebear.com/9.x/bottts/svg?seed=Mecha&backgroundColor=c0aede"), Avatar("pixel3", "Voxel", "https://api.dicebear.com/9.x/pixel-art/svg?seed=Kimberly"),
-    Avatar("pixel2", "Retro", "https://api.dicebear.com/9.x/pixel-art/svg?seed=Wyatt"), Avatar("ears2", "Pixie", "https://api.dicebear.com/9.x/big-ears/svg?seed=Sara"),
-    Avatar("smile1", "Cheery", "https://api.dicebear.com/9.x/big-smile/svg?seed=Jessica"), Avatar("unit", "Unit 01", "https://api.dicebear.com/9.x/bottts/svg?seed=Unit01&backgroundColor=c0aede"),
-    Avatar("smile2", "Glee", "https://api.dicebear.com/9.x/big-smile/svg?seed=Liliana"), Avatar("pixel4", "Block", "https://api.dicebear.com/9.x/pixel-art/svg?seed=Oliver"),
+    Avatar("ears1", R.string.about_imp, "https://api.dicebear.com/9.x/big-ears/svg?seed=Avery"), Avatar("pixel1", R.string.about_8_bit, "https://api.dicebear.com/9.x/pixel-art/svg?seed=Avery"),
+    Avatar("mecha", R.string.about_mecha, "https://api.dicebear.com/9.x/bottts/svg?seed=Mecha&backgroundColor=c0aede"), Avatar("pixel3", R.string.about_voxel, "https://api.dicebear.com/9.x/pixel-art/svg?seed=Kimberly"),
+    Avatar("pixel2", R.string.about_retro, "https://api.dicebear.com/9.x/pixel-art/svg?seed=Wyatt"), Avatar("ears2", R.string.about_pixie, "https://api.dicebear.com/9.x/big-ears/svg?seed=Sara"),
+    Avatar("smile1", R.string.about_cheery, "https://api.dicebear.com/9.x/big-smile/svg?seed=Jessica"), Avatar("unit", R.string.about_unit_01_name, "https://api.dicebear.com/9.x/bottts/svg?seed=Unit01&backgroundColor=c0aede"),
+    Avatar("smile2", R.string.about_glee, "https://api.dicebear.com/9.x/big-smile/svg?seed=Liliana"), Avatar("pixel4", R.string.about_block, "https://api.dicebear.com/9.x/pixel-art/svg?seed=Oliver"),
 )
 val LOCAL_BANNED_TERMS = listOf(
     "chut", "chutiya", "chooch", "bhosdi", "bhosad", "madarchod", "mc", "bc", "bhenchod", "behenchod", "gand", "gaand", "lund", "lavda", "lauda", "loda", "jhaatu", "jhat", "kutta", "kamina", "harami",
@@ -487,7 +490,7 @@ fun leaderboardSignature(data: Map<String, Any>): String =
 
 @Composable
 fun LeaderboardSubmitSheet(vm: MainViewModel, onDismiss: () -> Unit) {
-    val s = LocalS.current; val scope = rememberCoroutineScope(); val saved = s.userProfile
+    val s = LocalS.current; val scope = rememberCoroutineScope(); val saved = s.userProfile; val ctx = LocalContext.current
     var status by remember { mutableStateOf("idle") }; var err by remember { mutableStateOf("") }
     var name by remember { mutableStateOf(saved?.name ?: "") }
     var char by remember { mutableStateOf(CHARACTERS.firstOrNull { it.id == saved?.avatarId } ?: CHARACTERS[0]) }
@@ -514,8 +517,8 @@ fun LeaderboardSubmitSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             putJsonObject("data") { payload.forEach { (k, v) -> if (v is String) put(k, v) else put(k, (v as Number).toLong()) } }
             put("signature", leaderboardSignature(payload))
         }.toString()
-        runCatching { Net.postJson(WORKER_URL, body) }.onFailure { status = "error"; err = it.message ?: "Unknown Error" }.onSuccess { (code, res) ->
-            if (code !in 200..299) { status = "error"; err = if (code == 429) "Whoa! You can only join once every 24 hours." else runCatching { json.parseToJsonElement(res).jsonObject["error"]!!.jsonPrimitive.content }.getOrDefault("Portal connection failed."); return }
+        runCatching { Net.postJson(WORKER_URL, body) }.onFailure { status = "error"; err = it.message ?: ctx.getString(R.string.about_unknown_error) }.onSuccess { (code, res) ->
+            if (code !in 200..299) { status = "error"; err = if (code == 429) ctx.getString(R.string.about_whoa_you_can_only_join_once) else runCatching { json.parseToJsonElement(res).jsonObject["error"]!!.jsonPrimitive.content }.getOrDefault(ctx.getString(R.string.about_portal_connection_failed)); return }
             status = "success"
             vm.set { it.registerSubmission(now).copy(lastLeaderboardSubmissionTime = now).withProfile(UserProfile(name.trim(), char.id, char.url), now) }
         }
@@ -523,15 +526,15 @@ fun LeaderboardSubmitSheet(vm: MainViewModel, onDismiss: () -> Unit) {
     fun submit(sim: Boolean) {
         err = ""; val n = name.trim()
         err = when {
-            n.isEmpty() -> "Please enter a cool name!"; n.length > 15 -> "Name too long (Max 15 chars)"; n.length < 3 -> "Name too short (Min 3 chars)"
-            isProfane(n, blocklist) -> "Let's keep it family friendly!"; !canSubmit && !sim -> "You need 5 contributions to join the Hall of Fame!"
-            !sim && !Xp.plausible(s, System.currentTimeMillis()) -> "Your progress failed the integrity check, so it can't join the leaderboard."; else -> ""
+            n.isEmpty() -> ctx.getString(R.string.about_please_enter_a_cool_name); n.length > 15 -> ctx.getString(R.string.about_name_too_long_max_15_chars); n.length < 3 -> ctx.getString(R.string.about_name_too_short_min_3_chars)
+            isProfane(n, blocklist) -> ctx.getString(R.string.about_let_s_keep_it_family_friendly); !canSubmit && !sim -> ctx.getString(R.string.about_you_need_5_contributions_to_join)
+            !sim && !Xp.plausible(s, System.currentTimeMillis()) -> ctx.getString(R.string.about_your_progress_failed_the_integrity_check); else -> ""
         }
         if (err.isNotEmpty()) return
         status = "processing"; scope.launch { delay(2500); if (sim) status = "success" else network() }
     }
     OrionSheet(onDismiss) {
-        SheetTitle("Fame Gate", Sym.MilitaryTech, "Join the Legends")
+        SheetTitle(stringResource(R.string.about_fame_gate), Sym.MilitaryTech, stringResource(R.string.about_join_the_legends))
         AnimatedContent(status, Modifier.fillMaxWidth(), label = "gate") { st ->
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 when (st) {
@@ -546,50 +549,50 @@ fun LeaderboardSubmitSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         if (saved != null) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.secondaryContainer).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(pngAvatar(char.url), null, Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface))
                             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                                Text("Submitting As", style = MaterialTheme.typography.labelSmall); Text(saved.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+                                Text(stringResource(R.string.about_submitting_as), style = MaterialTheme.typography.labelSmall); Text(saved.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                             }
                             Column(horizontalAlignment = Alignment.End) {
-                                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Sym.Lock, null, Modifier.size(12.dp)); Text(" Alias Secured", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
-                                Text("Forever locked to this device", fontSize = 9.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Sym.Lock, null, Modifier.size(12.dp)); Text(stringResource(R.string.about_alias_secured), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold) }
+                                Text(stringResource(R.string.about_forever_locked_to_this_device), fontSize = 9.sp)
                             }
                         } else {
-                            Text("Choose Your Avatar", Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(R.string.about_choose_your_avatar), Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelLarge)
                             LazyVerticalGrid(GridCells.Fixed(5), Modifier.heightIn(max = 160.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), userScrollEnabled = false) {
                                 itemsIndexed(CHARACTERS) { _, c ->
                                     val sel = c.id == char.id
                                     val sc by animateFloatAsState(if (sel) 1.1f else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "sc")
-                                    AsyncImage(pngAvatar(c.url), c.name, Modifier.aspectRatio(1f).graphicsLayer { scaleX = sc; scaleY = sc }.clip(CircleShape)
+                                    AsyncImage(pngAvatar(c.url), stringResource(c.name), Modifier.aspectRatio(1f).graphicsLayer { scaleX = sc; scaleY = sc }.clip(CircleShape)
                                         .background(if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest).clickable { char = c; vm.haptic(H.SELECTION) }.padding(4.dp))
                                 }
                             }
-                            Text(char.name, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                            OutlinedTextField(name, { if (it.length <= 15) name = it }, Modifier.fillMaxWidth(), label = { Text("Your Alias (locked after first save)") }, placeholder = { Text("Captain Code") },
+                            Text(stringResource(char.name), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            OutlinedTextField(name, { if (it.length <= 15) name = it }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.about_your_alias_locked_after_first_save)) }, placeholder = { Text(stringResource(R.string.about_captain_code)) },
                                 singleLine = true, shape = RoundedCornerShape(16.dp), supportingText = { Text("${name.length}/15") })
                         }
                         Button({ submit(false) }, modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp), enabled = name.isNotEmpty() && canSubmit, shapes = ButtonDefaults.shapes()) {
                             Icon(if (canSubmit) Sym.RocketLaunch else Sym.Lock, null); Spacer(Modifier.width(8.dp))
-                            Text(if (canSubmit) "Beam Me Up!" else "Need 5 Contributions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+                            Text(if (canSubmit) stringResource(R.string.about_beam_me_up) else stringResource(R.string.about_need_5_contributions), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                         }
                         if (err.isNotEmpty()) Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                        if (s.isDevUnlocked) TextButton({ submit(true) }) { Icon(Sym.BugReport, null, Modifier.size(16.dp)); Text(" Simulate Protocol (Debug)") }
+                        if (s.isDevUnlocked) TextButton({ submit(true) }) { Icon(Sym.BugReport, null, Modifier.size(16.dp)); Text(stringResource(R.string.about_simulate_protocol_debug)) }
                     }
                     "processing" -> {
                         Box(contentAlignment = Alignment.Center) { LoadingIndicator(Modifier.size(140.dp)); AsyncImage(pngAvatar(char.url), null, Modifier.size(64.dp).clip(CircleShape)) }
-                        Text("Warping to Multiverse...", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-                        Text("Writing to Global Ledger", color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
+                        Text(stringResource(R.string.about_warping_to_multiverse), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                        Text(stringResource(R.string.about_writing_to_global_ledger), color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = FontFamily.Monospace)
                     }
                     "success" -> {
                         Icon(Sym.Verified, null, Modifier.size(72.dp), tint = Safe)
-                        Text("You're In!", style = MaterialTheme.typography.headlineMediumEmphasized)
-                        Text("${name.trim()} has been immortalized in the Hall of Fame.", textAlign = TextAlign.Center)
-                        Text("The leaderboard refreshes every 60 minutes. Check back soon!", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shapes = ButtonDefaults.shapes()) { Text("Return to Base") }
+                        Text(stringResource(R.string.about_you_re_in), style = MaterialTheme.typography.headlineMediumEmphasized)
+                        Text(stringResource(R.string.about_has_been_immortalized_in_the_hall, name.trim()), textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.about_the_leaderboard_refreshes_every_60_minutes), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.about_return_to_base)) }
                     }
                     else -> {
                         Icon(Sym.WifiOff, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
-                        Text("Signal Lost", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+                        Text(stringResource(R.string.about_signal_lost), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                         Text(err, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        FilledTonalButton({ status = "idle" }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) { Text("Try Again") }
+                        FilledTonalButton({ status = "idle" }, modifier = Modifier.fillMaxWidth(), shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.about_try_again)) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))

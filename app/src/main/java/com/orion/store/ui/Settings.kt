@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SharedTransitionLayout
@@ -66,11 +67,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.RoundedPolygon
+import com.orion.store.R
 import com.orion.store.data.*
 import com.orion.store.platform.Installer
 import com.orion.store.platform.WirelessAdb
@@ -119,12 +122,12 @@ fun identityExport(s: Settings, favorites: List<String>, now: Long): String {
     return Base64.encodeToString(pkg.toString().toByteArray(), Base64.NO_WRAP)
 }
 
-class IdentityError(msg: String) : Exception(msg)
+class IdentityError(@StringRes val resId: Int) : Exception()
 
 private inline fun <reified T> JsonObject.or(k: String, fb: T): T =
     get(k)?.takeIf { it !is JsonNull }?.let { runCatching { json.decodeFromJsonElement<T>(it) }.getOrNull() } ?: fb
 
-/** Returns merged settings plus favorites (null = keep current). Throws IdentityError with the user-facing message. */
+/** Returns merged settings plus favorites (null = keep current). Throws IdentityError with the user-facing message resource. */
 fun identityImport(raw: String, c: Settings): Pair<Settings, List<String>?> {
     val text = runCatching { String(Base64.decode(raw.trim(), Base64.DEFAULT)) }.getOrNull()?.takeIf { it.trimStart().startsWith("{") } ?: raw
     val d: JsonObject; val sig: String
@@ -132,11 +135,11 @@ fun identityImport(raw: String, c: Settings): Pair<Settings, List<String>?> {
         val pkg = json.parseToJsonElement(text).jsonObject
         d = pkg["data"] as? JsonObject ?: throw IllegalStateException("Invalid Save File")
         sig = (pkg["sig"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotEmpty() } ?: throw IllegalStateException("Invalid Save File")
-    } catch (_: Exception) { throw IdentityError("Corrupt or incompatible save file.") }
-    if (sha256Hex((d.toString() + ID_SALT).toByteArray()) != sig) throw IdentityError("Tampering Detected. Save integrity check failed.")
-    val merged = try { mergeIdentity(d, c) } catch (_: Exception) { throw IdentityError("Corrupt or incompatible save file.") }
+    } catch (_: Exception) { throw IdentityError(R.string.settings_corrupt_or_incompatible_save_file) }
+    if (sha256Hex((d.toString() + ID_SALT).toByteArray()) != sig) throw IdentityError(R.string.settings_tampering_detected_save_integrity_check_failed)
+    val merged = try { mergeIdentity(d, c) } catch (_: Exception) { throw IdentityError(R.string.settings_corrupt_or_incompatible_save_file) }
     // The signing salt ships in the APK, so a valid signature alone doesn't prove the numbers are real
-    if (!Xp.plausible(merged, System.currentTimeMillis())) throw IdentityError("This save has more progress than anyone could have earned. It was not restored.")
+    if (!Xp.plausible(merged, System.currentTimeMillis())) throw IdentityError(R.string.settings_this_save_has_more_progress_than)
     // Tier badges follow the level: drop the claimed ones and the level watcher grants back whatever the restored XP really earns
     val fair = merged.copy(unlockedBadges = merged.unlockedBadges.filter { b -> TIER_BADGES.none { it.second == b } })
     return fair to (d["favorites"] as? JsonArray)?.let { d.or<List<String>?>("favorites", null) }
@@ -205,16 +208,16 @@ private suspend fun pickDocument(types: Array<String>): Uri? {
 /** Accent of the open settings page; rows and headers tint from it. */
 private val LocalAccent = compositionLocalOf { Color(0xFF6366F1) }
 
-private data class Cat(val id: String, val icon: ImageVector, val color: Color, val title: String, val desc: String, val shape: RoundedPolygon)
+private data class Cat(val id: String, val icon: ImageVector, val color: Color, @StringRes val title: Int, @StringRes val desc: Int, val shape: RoundedPolygon)
 private val CATS = listOf(
-    Cat("queue", Sym.Downloading, Blue, "Downloads", "Queue, installs and pending updates", MaterialShapes.Cookie9Sided),
-    Cat("visuals", Sym.Palette, Purple, "Look & feel", "Theme, font, motion and density", MaterialShapes.Flower),
-    Cat("network", Sym.Wifi, SkyC, "Network", "Wi-Fi rules and auto-update", MaterialShapes.Clover4Leaf),
-    Cat("storage", Sym.CleaningServices, Orange, "Storage", "Janitor and saved APKs", MaterialShapes.Sunny),
-    Cat("installer", Sym.Shield, Green, "Orion Xtra", "Guardian, Sentinel and installer", MaterialShapes.Gem),
-    Cat("identity", Sym.Backup, Pink, "Backup", "Save or restore your identity", MaterialShapes.Cookie6Sided),
-    Cat("interface", Sym.ViewQuilt, Teal, "Interface", "Store layout and visible tabs", MaterialShapes.Pentagon),
-    Cat("developer", Sym.Terminal, Yellow, "Developer", "Debug switches and tools", MaterialShapes.SoftBurst),
+    Cat("queue", Sym.Downloading, Blue, R.string.settings_downloads, R.string.settings_queue_installs_and_pending_updates, MaterialShapes.Cookie9Sided),
+    Cat("visuals", Sym.Palette, Purple, R.string.settings_look_feel, R.string.settings_theme_font_motion_and_density, MaterialShapes.Flower),
+    Cat("network", Sym.Wifi, SkyC, R.string.settings_network, R.string.settings_wi_fi_rules_and_auto_update, MaterialShapes.Clover4Leaf),
+    Cat("storage", Sym.CleaningServices, Orange, R.string.settings_storage, R.string.settings_janitor_and_saved_apks, MaterialShapes.Sunny),
+    Cat("installer", Sym.Shield, Green, R.string.settings_orion_xtra, R.string.settings_guardian_sentinel_and_installer, MaterialShapes.Gem),
+    Cat("identity", Sym.Backup, Pink, R.string.settings_backup, R.string.settings_save_or_restore_your_identity, MaterialShapes.Cookie6Sided),
+    Cat("interface", Sym.ViewQuilt, Teal, R.string.settings_interface, R.string.settings_store_layout_and_visible_tabs, MaterialShapes.Pentagon),
+    Cat("developer", Sym.Terminal, Yellow, R.string.settings_developer, R.string.settings_debug_switches_and_tools, MaterialShapes.SoftBurst),
 )
 
 @Composable
@@ -325,7 +328,7 @@ fun SettingsScreen(vm: MainViewModel) {
     LaunchedEffect(menu) {
         if (menu != "installer") return@LaunchedEffect
         installersLoading = true; installersError = null
-        runCatching { withContext(Dispatchers.IO) { vm.tracker.installers() } }.onSuccess { installers = it }.onFailure { installersError = "Failed to load installers." }
+        runCatching { withContext(Dispatchers.IO) { vm.tracker.installers() } }.onSuccess { installers = it }.onFailure { installersError = ctx.getString(R.string.settings_failed_to_load_installers) }
         installersLoading = false
     }
     val fx = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -339,23 +342,23 @@ fun SettingsScreen(vm: MainViewModel) {
                 onBack = ::back) {
                 when (m) {
                     "identity" -> {
-                        Section("Your data stays here") {
-                            InfoCard("Save your progress to a file, or let Orion keep a copy in a cloud you pick. Nothing goes to an Orion server.", "Orion is serverless", Sym.CloudOff)
+                        Section(stringResource(R.string.settings_your_data_stays_here)) {
+                            InfoCard(stringResource(R.string.settings_save_your_progress_to_a_file), stringResource(R.string.settings_orion_is_serverless), Sym.CloudOff)
                         }
                         Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             val saving = remember { mutableStateOf(BackupPhase.IDLE) }
                             Button({
                                 scope.backupRun(saving, vm) {
                                     runCatching { vm.tracker.saveFile(identityExport(vm.s, vm.d.favorites, System.currentTimeMillis()), "orion_identity_${System.currentTimeMillis()}.osf") }
-                                        .onSuccess { importStatus = "Identity saved successfully." to "success" }
-                                        .onFailure { importStatus = "Export failed: ${it.message}" to "error" }.isSuccess
+                                        .onSuccess { importStatus = ctx.getString(R.string.settings_identity_saved_successfully) to "success" }
+                                        .onFailure { importStatus = ctx.getString(R.string.settings_export_failed, it.message) to "error" }.isSuccess
                                 }
                             }, modifier = Modifier.weight(1f).heightIn(min = 64.dp), shapes = ButtonDefaults.shapes()) {
                                 BackupGlyph(saving.value, 32.dp, MaterialTheme.colorScheme.onPrimary); Spacer(Modifier.width(8.dp))
                                 AnimatedContent(saving.value, transitionSpec = { (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut()) }, label = "save") { p ->
                                     Column {
-                                        Text(when (p) { BackupPhase.WORKING -> "Saving..."; BackupPhase.DONE -> "Saved"; BackupPhase.FAILED -> "Failed"; else -> "Back up" }, fontWeight = FontWeight.Bold)
-                                        Text(if (p == BackupPhase.DONE) "Check your files" else "Signed .osf file", style = MaterialTheme.typography.labelSmall)
+                                        Text(when (p) { BackupPhase.WORKING -> "Saving..."; BackupPhase.DONE -> "Saved"; BackupPhase.FAILED -> "Failed"; else -> stringResource(R.string.settings_back_up) }, fontWeight = FontWeight.Bold)
+                                        Text(if (p == BackupPhase.DONE) stringResource(R.string.settings_check_your_files) else stringResource(R.string.settings_signed_osf_file), style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
                             }
@@ -366,13 +369,13 @@ fun SettingsScreen(vm: MainViewModel) {
                                         val raw = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }
                                         val (merged, fav) = identityImport(raw, vm.s)
                                         vm.set { merged }; fav?.let { f -> vm.upd { it.copy(favorites = f) } }
-                                        importStatus = "Identity restored successfully!" to "success"; vm.haptic(H.SUCCESS)
+                                        importStatus = ctx.getString(R.string.settings_identity_restored_successfully) to "success"; vm.haptic(H.SUCCESS)
                                         delay(1500); vm.reload()
-                                    } catch (e: IdentityError) { importStatus = (e.message ?: "") to "error"; vm.haptic(H.ERROR) }
-                                    catch (_: Exception) { importStatus = "Corrupt or incompatible save file." to "error"; vm.haptic(H.ERROR) }
+                                    } catch (e: IdentityError) { importStatus = ctx.getString(e.resId) to "error"; vm.haptic(H.ERROR) }
+                                    catch (_: Exception) { importStatus = ctx.getString(R.string.settings_corrupt_or_incompatible_save_file) to "error"; vm.haptic(H.ERROR) }
                                 }
                             }, modifier = Modifier.weight(1f).heightIn(min = 64.dp), shapes = ButtonDefaults.shapes()) {
-                                Icon(Sym.FileDownload, null); Spacer(Modifier.width(8.dp)); Column { Text("Restore", fontWeight = FontWeight.Bold); Text("Import a save", style = MaterialTheme.typography.labelSmall) }
+                                Icon(Sym.FileDownload, null); Spacer(Modifier.width(8.dp)); Column { Text("Restore", fontWeight = FontWeight.Bold); Text(stringResource(R.string.settings_import_a_save), style = MaterialTheme.typography.labelSmall) }
                             }
                         }
                         AnimatedVisibility(importStatus.first.isNotEmpty()) {
@@ -385,96 +388,96 @@ fun SettingsScreen(vm: MainViewModel) {
                         CloudBackup(vm, s)
                     }
                     "network" -> Section("Downloads") {
-                        Toggle(Sym.Wifi, "Wi-Fi only", "Skip downloads on cellular data", s.wifiOnly) { vm.set { it.copy(wifiOnly = !it.wifiOnly) } }
-                        Toggle(Sym.Autorenew, "Auto-update apps", "Check and download updates every few hours, even with Orion closed", s.autoUpdateEnabled) { vm.set { it.copy(autoUpdateEnabled = !it.autoUpdateEnabled) } }
+                        Toggle(Sym.Wifi, stringResource(R.string.guide_wi_fi_only), stringResource(R.string.settings_skip_downloads_on_cellular_data), s.wifiOnly) { vm.set { it.copy(wifiOnly = !it.wifiOnly) } }
+                        Toggle(Sym.Autorenew, stringResource(R.string.settings_auto_update_apps), stringResource(R.string.settings_check_and_download_updates_every_few), s.autoUpdateEnabled) { vm.set { it.copy(autoUpdateEnabled = !it.autoUpdateEnabled) } }
                         if (s.autoUpdateEnabled) {
-                            Toggle(Sym.SystemUpdate, "Install automatically", "Install downloaded updates over the current app. Anything that fails shows up next time you open Orion.", s.autoInstall) {
+                            Toggle(Sym.SystemUpdate, stringResource(R.string.guide_install_automatically), stringResource(R.string.settings_install_downloaded_updates_over_the_current), s.autoInstall) {
                                 vm.set { it.copy(autoInstall = !it.autoInstall) }
                             }
                             if (s.autoInstall) InfoCard(when {
-                                s.rootMode -> "Root mode is on: every update installs silently."
-                                s.useShizuku -> "Silent installs run through Shizuku, as long as Shizuku is running."
-                                android.os.Build.VERSION.SDK_INT >= 31 -> "Apps Orion installed update silently. Apps from other stores need one tap, or adopt them with Root mode."
-                                else -> "This Android version asks before every install. Root or Shizuku make updates silent."
+                                s.rootMode -> stringResource(R.string.settings_root_mode_is_on_every_update)
+                                s.useShizuku -> stringResource(R.string.settings_silent_installs_run_through_shizuku_as)
+                                android.os.Build.VERSION.SDK_INT >= 31 -> stringResource(R.string.settings_apps_orion_installed_update_silently_apps)
+                                else -> stringResource(R.string.settings_this_android_version_asks_before_every)
                             })
                         }
-                        Toggle(Sym.Verified, "Stable releases only", "Skip Beta, Alpha and Nightly builds when a stable one exists", s.stableOnly) { vm.set { it.copy(stableOnly = !it.stableOnly) } }
+                        Toggle(Sym.Verified, stringResource(R.string.guide_stable_releases_only), stringResource(R.string.settings_skip_beta_alpha_and_nightly_builds), s.stableOnly) { vm.set { it.copy(stableOnly = !it.stableOnly) } }
                     }
                     "installer" -> {
                         Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FeatureTile(Sym.Shield, "Guardian", "Permissions, APK export, debloat", Green, MaterialShapes.Cookie9Sided, Modifier.weight(1f)) { modal = "guardian" }
-                            FeatureTile(Sym.MonitorHeart, "Sentinel", "Malware scan for installed apps", Blue, MaterialShapes.Sunny, Modifier.weight(1f)) { modal = "sentinel" }
+                            FeatureTile(Sym.Shield, "Guardian", stringResource(R.string.settings_permissions_apk_export_debloat), Green, MaterialShapes.Cookie9Sided, Modifier.weight(1f)) { modal = "guardian" }
+                            FeatureTile(Sym.MonitorHeart, "Sentinel", stringResource(R.string.settings_malware_scan_for_installed_apps), Blue, MaterialShapes.Sunny, Modifier.weight(1f)) { modal = "sentinel" }
                         }
                         val ch = ptr(s.pullToRefreshCharacter)
-                        Section("Pull to refresh") {
-                            SRow(Sym.AutoFixHigh, "Refresh character", ch.name, onClick = { picker = "ptr" }) {
+                        Section(stringResource(R.string.pixel_pull_to_refresh)) {
+                            SRow(Sym.AutoFixHigh, stringResource(R.string.settings_refresh_character), stringResource(ch.name), onClick = { picker = "ptr" }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     PtrBadge(ch, 48.dp)
                                     Chevron()
                                 }
                             }
                         }
-                        Section("Install behavior") {
-                            SRow(Sym.Android, "APK installer", when (s.installerPreference) {
-                                "package" -> s.installerLabel.ifEmpty { "Specific Installer" }; "chooser" -> "Ask Every Time"; else -> "System Installer"
+                        Section(stringResource(R.string.settings_install_behavior)) {
+                            SRow(Sym.Android, stringResource(R.string.settings_apk_installer), when (s.installerPreference) {
+                                "package" -> s.installerLabel.ifEmpty { stringResource(R.string.settings_specific_installer) }; "chooser" -> stringResource(R.string.settings_ask_every_time); else -> stringResource(R.string.settings_system_installer)
                             }, onClick = { installerStep = "mode"; picker = "installer" }) { Chevron() }
-                            if (WirelessAdb.supported) Toggle(Sym.Speed, "Skip the 24-hour wait", "Install instantly through built-in wireless debugging", s.directInstall) {
+                            if (WirelessAdb.supported) Toggle(Sym.Speed, stringResource(R.string.guide_skip_the_24_hour_wait), stringResource(R.string.settings_install_instantly_through_built_in_wireless), s.directInstall) {
                                 if (vm.s.directInstall) vm.set { it.copy(directInstall = false) } else { picker = "direct" }
                             }
-                            Toggle(Sym.Bolt, "Silent install", "Install apps in the background", s.useShizuku) {
+                            Toggle(Sym.Bolt, stringResource(R.string.settings_silent_install), stringResource(R.string.settings_install_apps_in_the_background), s.useShizuku) {
                                 shizukuError = null
                                 if (!vm.s.useShizuku) scope.launch {
                                     try { vm.tracker.requestElevated(); vm.set { it.copy(useShizuku = !it.useShizuku) } }
-                                    catch (e: Exception) { shizukuError = if ((e.message ?: "").contains("Shizuku is NOT running")) "Shizuku service is not running." else "Permission was denied by user." }
+                                    catch (e: Exception) { shizukuError = if ((e.message ?: "").contains("Shizuku is NOT running")) ctx.getString(R.string.settings_shizuku_service_is_not_running) else ctx.getString(R.string.settings_permission_was_denied_by_user) }
                                 } else vm.set { it.copy(useShizuku = !it.useShizuku) }
                             }
                             shizukuError?.let { Text(it, Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.errorContainer).padding(16.dp),
                                 color = MaterialTheme.colorScheme.onErrorContainer, fontWeight = FontWeight.Bold) }
-                            InfoCard("Silent installs require Shizuku to be installed and running.") {
-                                TextButton({ vm.navigateFromSettings("shizuku") }, contentPadding = PaddingValues(0.dp)) { Text("Get Shizuku") }
+                            InfoCard(stringResource(R.string.settings_silent_installs_require_shizuku_to_be)) {
+                                TextButton({ vm.navigateFromSettings("shizuku") }, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.settings_get_shizuku)) }
                             }
                         }
                         Section("Root") {
                             var adopt by remember { mutableStateOf<String?>(null) }
                             ConfirmDialog(adopt, "Adopt", onConfirm = vm::adoptApps, onDismiss = { adopt = null })
-                            Toggle(Sym.Terminal, "Root mode", "Silent installs and every Guardian tool through su, no Shizuku or wireless debugging", s.rootMode) {
+                            Toggle(Sym.Terminal, stringResource(R.string.guide_root_mode), stringResource(R.string.settings_silent_installs_and_every_guardian_tool), s.rootMode) {
                                 if (vm.s.rootMode) vm.set { it.copy(rootMode = false) }
-                                else scope.launch { if (vm.tracker.requestRoot()) { vm.set { it.copy(rootMode = true) }; vm.haptic(H.SUCCESS) } else vm.error("Root access was denied or this device is not rooted.") }
+                                else scope.launch { if (vm.tracker.requestRoot()) { vm.set { it.copy(rootMode = true) }; vm.haptic(H.SUCCESS) } else vm.error(ctx.getString(R.string.settings_root_access_was_denied_or_this)) }
                             }
                             if (s.rootMode) {
-                                if (android.os.Build.VERSION.SDK_INT >= 34) Toggle(Sym.Lock, "Update lock", "Other stores must ask you before updating apps Orion installs", s.updateLock) { vm.set { it.copy(updateLock = !it.updateLock) } }
-                                SRow(Sym.Sync, "Adopt installed apps", "Make Orion the updater of catalog apps you got elsewhere. Keeps their data.", onClick = {
-                                    adopt = "Orion reinstalls the same APK of each catalog app you installed from another source and becomes its installer. App data stays. The other store stops updating them."
+                                if (android.os.Build.VERSION.SDK_INT >= 34) Toggle(Sym.Lock, stringResource(R.string.guide_update_lock), stringResource(R.string.settings_other_stores_must_ask_you_before), s.updateLock) { vm.set { it.copy(updateLock = !it.updateLock) } }
+                                SRow(Sym.Sync, stringResource(R.string.guide_adopt_installed_apps), stringResource(R.string.settings_make_orion_the_updater_of_catalog), onClick = {
+                                    adopt = ctx.getString(R.string.settings_orion_reinstalls_the_same_apk_of)
                                 }) { Chevron() }
-                                SRow(Sym.DeleteSweep, "Clear every app's cache", "Free space across all apps in one tap", onClick = vm::trimCaches) { Chevron() }
+                                SRow(Sym.DeleteSweep, stringResource(R.string.guide_clear_every_app_s_cache), stringResource(R.string.settings_free_space_across_all_apps_in), onClick = vm::trimCaches) { Chevron() }
                             }
                         }
                         Section("Recovery") {
-                            SRow(Sym.Sync, "Force rescan packages", "Reload every installed app list", onClick = { vm.reload(); vm.scheduleInstalledSync(); vm.close(Overlay.SETTINGS) })
+                            SRow(Sym.Sync, stringResource(R.string.settings_force_rescan_packages), stringResource(R.string.settings_reload_every_installed_app_list), onClick = { vm.reload(); vm.scheduleInstalledSync(); vm.close(Overlay.SETTINGS) })
                         }
                     }
                     "storage" -> {
-                        StatHero("${d.pendingCleanup.size}", if (d.pendingCleanup.size == 1) "APK waiting for cleanup" else "APKs waiting for cleanup") {
+                        StatHero("${d.pendingCleanup.size}", if (d.pendingCleanup.size == 1) stringResource(R.string.settings_apk_waiting_for_cleanup) else stringResource(R.string.settings_apks_waiting_for_cleanup)) {
                             if (d.pendingCleanup.isNotEmpty()) Button({ vm.batchCleanup(); vm.haptic(H.SUCCESS) }, shapes = ButtonDefaults.shapes()) {
-                                Icon(Sym.CleaningServices, null); Spacer(Modifier.width(8.dp)); Text("Clean now")
+                                Icon(Sym.CleaningServices, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.settings_clean_now))
                             }
                         }
                         Section("Janitor") {
-                            Toggle(Sym.CleaningServices, "Auto-cleanup installer", "Remove APKs after they install", s.deleteApk) { vm.set { it.copy(deleteApk = !it.deleteApk) } }
-                            InfoCard("Janitor mode clears installed APK files on next app start.")
+                            Toggle(Sym.CleaningServices, stringResource(R.string.settings_auto_cleanup_installer), stringResource(R.string.settings_remove_apks_after_they_install), s.deleteApk) { vm.set { it.copy(deleteApk = !it.deleteApk) } }
+                            InfoCard(stringResource(R.string.settings_janitor_mode_clears_installed_apk_files))
                         }
                     }
                     "queue" -> {
-                        StatHero("${active + ready + pending}", "in the queue · $active active · $ready ready · $pending updates") {
-                            if ((s.useShizuku || s.directInstall || s.rootMode) && ready > 1) Button(vm::batchInstall, shapes = ButtonDefaults.shapes()) { Icon(Sym.Bolt, null); Spacer(Modifier.width(8.dp)); Text("Update all ($ready)") }
+                        StatHero("${active + ready + pending}", stringResource(R.string.settings_in_the_queue_active_ready_updates, active, ready, pending)) {
+                            if ((s.useShizuku || s.directInstall || s.rootMode) && ready > 1) Button(vm::batchInstall, shapes = ButtonDefaults.shapes()) { Icon(Sym.Bolt, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.settings_update_all, ready)) }
                         }
-                        if (active == 0 && vm.updates.isEmpty() && ready == 0) EmptyState(Sym.DownloadDone, "Queue is empty", "Downloads and updates show up here.")
+                        if (active == 0 && vm.updates.isEmpty() && ready == 0) EmptyState(Sym.DownloadDone, stringResource(R.string.settings_queue_is_empty), stringResource(R.string.settings_downloads_and_updates_show_up_here))
                         else Section("Queue") {
                             fun app(id: String) = all.firstOrNull { it.id == id }
                             d.readyToInstall.forEach { (id, file) ->
                                 val a = app(id)
                                 ListItem({ Text(a?.name ?: id, style = MaterialTheme.typography.titleMedium) }, Modifier.clip(RoundedCornerShape(4.dp)).clickable { a?.let { vm.navigateFromSettings(it.id) } },
-                                    supportingContent = { Text("Ready to install") }, leadingContent = { a?.let { AppIcon(it, 44.dp) } ?: TonalIcon(Sym.Inventory, Safe) },
+                                    supportingContent = { Text(stringResource(R.string.logic_ready_to_install)) }, leadingContent = { a?.let { AppIcon(it, 44.dp) } ?: TonalIcon(Sym.Inventory, Safe) },
                                     trailingContent = {
                                         if (vm.installingId == id) LoadingIndicator(Modifier.size(32.dp))
                                         else Button({ a?.let { vm.installFile(it, file) } }, shapes = ButtonDefaults.shapes(), contentPadding = ButtonDefaults.SmallContentPadding) { Text("Install") }
@@ -487,14 +490,14 @@ fun SettingsScreen(vm: MainViewModel) {
                                         a?.let { AppIcon(it, 44.dp) }; Spacer(Modifier.width(12.dp))
                                         Text(a?.name ?: id, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         Text("${p.roundToInt()}%", style = MaterialTheme.typography.labelLarge)
-                                        IconButton({ vm.cancelDownload(id) }) { Icon(Sym.Close, "Cancel download") }
+                                        IconButton({ vm.cancelDownload(id) }) { Icon(Sym.Close, stringResource(R.string.detail_cancel_download)) }
                                     }
                                     LinearWavyProgressIndicator({ p / 100f }, Modifier.fillMaxWidth().padding(top = 8.dp))
                                 }
                             }
                             vm.updates.filter { it.id !in d.activeDownloads && it.id !in d.readyToInstall }.forEach { a ->
                                 ListItem({ Text(a.name, style = MaterialTheme.typography.titleMedium) }, Modifier.clip(RoundedCornerShape(4.dp)).clickable { vm.navigateFromSettings(a.id) },
-                                    supportingContent = { Text("Update to v${a.latestVersion}") }, leadingContent = { AppIcon(a, 44.dp) },
+                                    supportingContent = { Text(stringResource(R.string.settings_update_to_v, a.latestVersion)) }, leadingContent = { AppIcon(a, 44.dp) },
                                     trailingContent = { FilledTonalButton({ vm.download(a) }, shapes = ButtonDefaults.shapes(), contentPadding = ButtonDefaults.SmallContentPadding) { Text("Update") } },
                                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer))
                             }
@@ -503,26 +506,26 @@ fun SettingsScreen(vm: MainViewModel) {
                     "visuals" -> {
                         ThemePicker(vm, s)
                         PalettePicker(vm, s)
-                        Section("Color & type") {
-                            Toggle(Sym.AutoAwesome, "Material You", "Dynamic wallpaper colors (Android 12+)", s.materialYouEnabled) { vm.set { it.copy(materialYouEnabled = !it.materialYouEnabled) } }
+                        Section(stringResource(R.string.settings_color_type)) {
+                            Toggle(Sym.AutoAwesome, stringResource(R.string.guide_material_you), stringResource(R.string.settings_dynamic_wallpaper_colors_android_12), s.materialYouEnabled) { vm.set { it.copy(materialYouEnabled = !it.materialYouEnabled) } }
                             SRow(Sym.FontDownload, "Font", fontLabel(s), onClick = { fontError = null; picker = "font" }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) { Text("Aa", style = MaterialTheme.typography.headlineSmallEmphasized); Chevron() }
                             }
                         }
-                        Section("Motion & feel") {
-                            Toggle(Sym.TouchApp, "Haptic feedback", "Tactile taps on buttons and toggles", s.hapticEnabled) { vm.set { it.copy(hapticEnabled = !it.hapticEnabled) } }
-                            Toggle(Sym.Speed, "Smooth motion", "Prefer high refresh rate scrolling", s.highRefreshRate) { vm.set { it.copy(highRefreshRate = !it.highRefreshRate) } }
-                            Toggle(Sym.MotionPhotosOff, "Disable animations", "Every transition snaps instantly", s.disableAnimations) { vm.set { it.copy(disableAnimations = !it.disableAnimations) } }
-                            Toggle(Sym.BlurOn, "Glass dock", "Slightly translucent floating navigation", s.glassEffect) { vm.set { it.copy(glassEffect = !it.glassEffect) } }
-                            Toggle(Sym.Compress, "Compact mode", "Smaller rows with denser spacing", s.compactMode) { vm.set { it.copy(compactMode = !it.compactMode) } }
+                        Section(stringResource(R.string.settings_motion_feel)) {
+                            Toggle(Sym.TouchApp, stringResource(R.string.guide_haptic_feedback), stringResource(R.string.settings_tactile_taps_on_buttons_and_toggles), s.hapticEnabled) { vm.set { it.copy(hapticEnabled = !it.hapticEnabled) } }
+                            Toggle(Sym.Speed, stringResource(R.string.guide_smooth_motion), stringResource(R.string.settings_prefer_high_refresh_rate_scrolling), s.highRefreshRate) { vm.set { it.copy(highRefreshRate = !it.highRefreshRate) } }
+                            Toggle(Sym.MotionPhotosOff, stringResource(R.string.guide_disable_animations), stringResource(R.string.settings_every_transition_snaps_instantly), s.disableAnimations) { vm.set { it.copy(disableAnimations = !it.disableAnimations) } }
+                            Toggle(Sym.BlurOn, stringResource(R.string.guide_glass_dock), stringResource(R.string.settings_slightly_translucent_floating_navigation), s.glassEffect) { vm.set { it.copy(glassEffect = !it.glassEffect) } }
+                            Toggle(Sym.Compress, stringResource(R.string.guide_compact_mode), stringResource(R.string.settings_smaller_rows_with_denser_spacing), s.compactMode) { vm.set { it.copy(compactMode = !it.compactMode) } }
                         }
                         DockSize(vm, s)
                     }
                     "interface" -> {
                         LayoutPicker(vm, s)
-                        Section("Navigation tabs") {
-                            listOf(Triple("android", "Apps", "Android apps"), Triple("pc", "PC", "PC and desktop software"),
-                                Triple("tv", "TV", "TV and big-screen apps"), Triple("myapps", "My Apps", "Library and download history")).forEach { (t, title, desc) ->
+                        Section(stringResource(R.string.settings_navigation_tabs)) {
+                            listOf(Triple("android", "Apps", stringResource(R.string.settings_android_apps)), Triple("pc", "PC", stringResource(R.string.settings_pc_and_desktop_software)),
+                                Triple("tv", "TV", stringResource(R.string.settings_tv_and_big_screen_apps)), Triple("myapps", stringResource(R.string.root_my_apps), stringResource(R.string.settings_library_and_download_history))).forEach { (t, title, desc) ->
                                 Toggle(when (t) { "android" -> Sym.Android; "pc" -> Sym.DesktopWindows; "tv" -> Sym.Tv; else -> Sym.GridView }, title, desc, t !in s.hiddenTabs) {
                                     vm.set { it.toggleHiddenTab(t) }
                                 }
@@ -530,14 +533,14 @@ fun SettingsScreen(vm: MainViewModel) {
                         }
                     }
                     "developer" -> {
-                        Section("Testing and debug") {
-                            InfoCard("These options are for testing and modifying core app behavior. They may cause instability.", icon = Sym.Warning)
-                            Toggle(Sym.Storage, "Enable built-in data", "Load packaged data instead of remote sources", s.loadLocalData) { vm.set { it.copy(loadLocalData = !it.loadLocalData) } }
-                            Toggle(Sym.Construction, "Local maintenance mode", "Work on bundles and data locally", s.localMaintenanceMode) {
+                        Section(stringResource(R.string.settings_testing_and_debug)) {
+                            InfoCard(stringResource(R.string.settings_these_options_are_for_testing_and), icon = Sym.Warning)
+                            Toggle(Sym.Storage, stringResource(R.string.settings_enable_built_in_data), stringResource(R.string.settings_load_packaged_data_instead_of_remote), s.loadLocalData) { vm.set { it.copy(loadLocalData = !it.loadLocalData) } }
+                            Toggle(Sym.Construction, stringResource(R.string.settings_local_maintenance_mode), stringResource(R.string.settings_work_on_bundles_and_data_locally), s.localMaintenanceMode) {
                                 vm.set { it.copy(localMaintenanceMode = !it.localMaintenanceMode) }
                             }
-                            SRow(Sym.Radar, "Run catalog scanner (Admin)", "Check every app for missing text and dead links", onClick = { modal = "scanner" }) { Chevron() }
-                            SRow(Sym.DeleteSweep, "Clear system cache", "Reset pending cleanup and ready installs", onClick = {
+                            SRow(Sym.Radar, stringResource(R.string.settings_run_catalog_scanner_admin), stringResource(R.string.settings_check_every_app_for_missing_text), onClick = { modal = "scanner" }) { Chevron() }
+                            SRow(Sym.DeleteSweep, stringResource(R.string.settings_clear_system_cache), stringResource(R.string.settings_reset_pending_cleanup_and_ready_installs), onClick = {
                                 vm.upd { it.copy(pendingCleanup = emptyMap(), readyToInstall = emptyMap()) }; vm.haptic(H.WARNING)
                             })
                         }
@@ -558,8 +561,8 @@ fun SettingsScreen(vm: MainViewModel) {
                     if (cur.moveToFirst()) cur.getString(cur.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)) to cur.getLong(cur.getColumnIndexOrThrow(OpenableColumns.SIZE)) else null
                 } ?: ("" to 0L)
                 val ext = name.substringAfterLast('.', "").lowercase()
-                if (ext !in setOf("ttf", "otf", "woff2")) { fontError = "Choose a TTF, OTF, or WOFF2 file."; return@launch }
-                if (size > 8 * 1024 * 1024) { fontError = "Fonts must be 8 MB or smaller."; return@launch }
+                if (ext !in setOf("ttf", "otf", "woff2")) { fontError = ctx.getString(R.string.settings_choose_a_ttf_otf_or_woff2); return@launch }
+                if (size > 8 * 1024 * 1024) { fontError = ctx.getString(R.string.settings_fonts_must_be_8_mb_or); return@launch }
                 importingFont = true
                 val id = "font-${System.currentTimeMillis()}-${(1..6).map { "abcdefghijklmnopqrstuvwxyz0123456789".random() }.joinToString("")}"
                 runCatching {
@@ -570,7 +573,7 @@ fun SettingsScreen(vm: MainViewModel) {
                 }.onSuccess { f ->
                     val font = CustomFont(id, name.substringBeforeLast('.').trim().ifEmpty { "Custom Font" }, name, ctx.contentResolver.getType(uri) ?: "font/$ext", f.absolutePath, System.currentTimeMillis())
                     vm.set { it.copy(customFonts = it.customFonts + font, appFont = "custom:$id") }
-                }.onFailure { fontError = "Could not read this font." }
+                }.onFailure { fontError = ctx.getString(R.string.settings_could_not_read_this_font) }
                 importingFont = false
             }
         }) { picker = null }
@@ -589,14 +592,14 @@ private val PAGE_RESIZE = SharedTransitionScope.ResizeMode.scaleToBounds(android
 
 /** One closing tip per page, so short pages end on something useful instead of empty surface. */
 private val TIPS = mapOf(
-    "queue" to "Downloads keep running in the background, with live progress in your notifications.",
-    "visuals" to "The theme button in the search bar cycles Light, Dusk and Dark from anywhere.",
-    "network" to "Auto-update queues new versions whenever the catalog refreshes. Wi-Fi only blocks downloads on mobile data.",
-    "storage" to "The janitor clears leftover APKs a week after install, or on the next launch with Delete APK on.",
-    "installer" to "With Shizuku, installs and updates go through without a confirmation prompt each time.",
-    "identity" to "Your backup is a single small .osf file. Keep a copy in your cloud drive and restore it on any phone.",
-    "interface" to "Hidden tabs come back from here at any time. The Dev tab always stays.",
-    "developer" to "Close developer options from the bottom of this page when you are done.",
+    "queue" to R.string.settings_downloads_keep_running_in_the_background,
+    "visuals" to R.string.settings_the_theme_button_in_the_search,
+    "network" to R.string.settings_auto_update_queues_new_versions_whenever,
+    "storage" to R.string.settings_the_janitor_clears_leftover_apks_a,
+    "installer" to R.string.settings_with_shizuku_installs_and_updates_go,
+    "identity" to R.string.settings_your_backup_is_a_single_small,
+    "interface" to R.string.settings_hidden_tabs_come_back_from_here,
+    "developer" to R.string.settings_close_developer_options_from_the_bottom,
 )
 
 @Composable
@@ -607,7 +610,7 @@ private fun PageFooter(cat: Cat) {
             Spinner(cat.shape, fg.copy(.12f), 112.dp, periodMs = 30_000)
             Icon(cat.icon, null, Modifier.size(40.dp), tint = fg.copy(.7f))
         }
-        Text(TIPS[cat.id] ?: cat.desc, Modifier.padding(top = 16.dp), style = MaterialTheme.typography.bodyMedium,
+        Text(stringResource(TIPS[cat.id] ?: cat.desc), Modifier.padding(top = 16.dp), style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
@@ -620,15 +623,15 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
     Column(Modifier.fillMaxSize().background(cs.surface).verticalScroll(rememberScrollState()).readableWidth().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility).padding(bottom = 32.dp)) {
         Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp)) {
             Text("Settings", style = MaterialTheme.typography.displaySmallEmphasized)
-            Text("Orion Store v$STORE_VERSION · ${vm.allApps().size} apps in catalog", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+            Text(stringResource(R.string.settings_orion_store_v_apps_in_catalog, STORE_VERSION, vm.allApps().size), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         }
         var editing by remember { mutableStateOf(false) }
-        HubHeader("Quick toggles") { IconButton({ editing = true }) { Icon(Sym.Edit, "Edit quick toggles", tint = cs.primary) } }
+        HubHeader(stringResource(R.string.guide_quick_toggles)) { IconButton({ editing = true }) { Icon(Sym.Edit, stringResource(R.string.settings_edit_quick_toggles), tint = cs.primary) } }
         val quick = (s.quickTiles ?: DEFAULT_QUICK).mapNotNull { id -> QUICK.firstOrNull { it.id == id && it.shown(s) } }
-        if (quick.isEmpty()) Text("No quick toggles. Tap the pencil to add your favorites.", Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+        if (quick.isEmpty()) Text(stringResource(R.string.settings_no_quick_toggles_tap_the_pencil), Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
         quick.chunked(2).forEach { row ->
             Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { q -> QuickTile(q.icon, q.label, q.get(s), Modifier.weight(1f)) { vm.haptic(H.SELECTION); vm.set(q.flip) } }
+                row.forEach { q -> QuickTile(q.icon, stringResource(q.label), q.get(s), Modifier.weight(1f)) { vm.haptic(H.SELECTION); vm.set(q.flip) } }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
@@ -679,7 +682,7 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
             Bento(vm, c, shared, modifier.movable(i, c.id), compact, badge) {
                 if (!compact) when (c.id) {
                     "queue" -> {
-                        Text(if (queued == 0) "All caught up" else "$active active · $ready ready · $pending updates", style = MaterialTheme.typography.labelLarge, color = LocalContentColor.current.copy(.8f))
+                        Text(if (queued == 0) stringResource(R.string.settings_all_caught_up) else stringResource(R.string.settings_active_ready_updates, active, ready, pending), style = MaterialTheme.typography.labelLarge, color = LocalContentColor.current.copy(.8f))
                         val prog = d.activeDownloads.keys.mapNotNull { d.downloadProgress[it] }.takeIf { it.isNotEmpty() }?.average()?.toFloat()
                         if (prog != null) LinearWavyProgressIndicator({ prog / 100f }, Modifier.fillMaxWidth().padding(top = 8.dp), color = LocalContentColor.current)
                     }
@@ -692,7 +695,7 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
                 }
             }
         }
-        HubHeader("Everything else", "Long-press a card to move it") {
+        HubHeader(stringResource(R.string.settings_everything_else), stringResource(R.string.settings_long_press_a_card_to_move)) {
             if (s.settingsOrder.isNotEmpty()) TextButton({ vm.set { it.copy(settingsOrder = emptyList()) }; vm.haptic(H.MEDIUM) }) { Text("Reset") }
         }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -729,21 +732,21 @@ private fun HubHeader(title: String, hint: String? = null, action: @Composable (
 private val HUB_ORDER = listOf("queue", "visuals", "network", "storage", "installer", "identity", "interface")
 
 /** Every setting a quick tile can flip. Ones that need a grant first (Shizuku, root, wireless pairing) stay on their pages. */
-private class Quick(val id: String, val icon: ImageVector, val label: String, val get: (Settings) -> Boolean, val shown: (Settings) -> Boolean = { true }, val flip: (Settings) -> Settings)
+private class Quick(val id: String, val icon: ImageVector, @StringRes val label: Int, val get: (Settings) -> Boolean, val shown: (Settings) -> Boolean = { true }, val flip: (Settings) -> Settings)
 private val QUICK = listOf(
-    Quick("autoUpdate", Sym.Autorenew, "Auto-update", { it.autoUpdateEnabled }) { it.copy(autoUpdateEnabled = !it.autoUpdateEnabled) },
-    Quick("wifiOnly", Sym.Wifi, "Wi-Fi only", { it.wifiOnly }) { it.copy(wifiOnly = !it.wifiOnly) },
-    Quick("haptics", Sym.Vibration, "Haptics", { it.hapticEnabled }) { it.copy(hapticEnabled = !it.hapticEnabled) },
-    Quick("materialYou", Sym.Wallpaper, "Material You", { it.materialYouEnabled }, { android.os.Build.VERSION.SDK_INT >= 31 }) { it.copy(materialYouEnabled = !it.materialYouEnabled) },
-    Quick("smooth", Sym.Speed, "Smooth motion", { it.highRefreshRate }) { it.copy(highRefreshRate = !it.highRefreshRate) },
-    Quick("compact", Sym.Compress, "Compact", { it.compactMode }) { it.copy(compactMode = !it.compactMode) },
-    Quick("stableOnly", Sym.Verified, "Stable only", { it.stableOnly }) { it.copy(stableOnly = !it.stableOnly) },
-    Quick("cleanup", Sym.CleaningServices, "Auto-cleanup", { it.deleteApk }) { it.copy(deleteApk = !it.deleteApk) },
-    Quick("noMotion", Sym.MotionPhotosOff, "No animations", { it.disableAnimations }) { it.copy(disableAnimations = !it.disableAnimations) },
-    Quick("glass", Sym.BlurOn, "Glass dock", { it.glassEffect }) { it.copy(glassEffect = !it.glassEffect) },
-    Quick("updateLock", Sym.Lock, "Update lock", { it.updateLock }, { it.rootMode && android.os.Build.VERSION.SDK_INT >= 34 }) { it.copy(updateLock = !it.updateLock) },
-    Quick("localData", Sym.Storage, "Built-in data", { it.loadLocalData }, { it.isDevUnlocked }) { it.copy(loadLocalData = !it.loadLocalData) },
-    Quick("maintenance", Sym.Construction, "Maintenance", { it.localMaintenanceMode }, { it.isDevUnlocked }) { it.copy(localMaintenanceMode = !it.localMaintenanceMode) },
+    Quick("autoUpdate", Sym.Autorenew, R.string.guide_auto_update, { it.autoUpdateEnabled }) { it.copy(autoUpdateEnabled = !it.autoUpdateEnabled) },
+    Quick("wifiOnly", Sym.Wifi, R.string.guide_wi_fi_only, { it.wifiOnly }) { it.copy(wifiOnly = !it.wifiOnly) },
+    Quick("haptics", Sym.Vibration, R.string.settings_haptics, { it.hapticEnabled }) { it.copy(hapticEnabled = !it.hapticEnabled) },
+    Quick("materialYou", Sym.Wallpaper, R.string.guide_material_you, { it.materialYouEnabled }, { android.os.Build.VERSION.SDK_INT >= 31 }) { it.copy(materialYouEnabled = !it.materialYouEnabled) },
+    Quick("smooth", Sym.Speed, R.string.guide_smooth_motion, { it.highRefreshRate }) { it.copy(highRefreshRate = !it.highRefreshRate) },
+    Quick("compact", Sym.Compress, R.string.settings_compact, { it.compactMode }) { it.copy(compactMode = !it.compactMode) },
+    Quick("stableOnly", Sym.Verified, R.string.settings_stable_only, { it.stableOnly }) { it.copy(stableOnly = !it.stableOnly) },
+    Quick("cleanup", Sym.CleaningServices, R.string.settings_auto_cleanup, { it.deleteApk }) { it.copy(deleteApk = !it.deleteApk) },
+    Quick("noMotion", Sym.MotionPhotosOff, R.string.settings_no_animations, { it.disableAnimations }) { it.copy(disableAnimations = !it.disableAnimations) },
+    Quick("glass", Sym.BlurOn, R.string.guide_glass_dock, { it.glassEffect }) { it.copy(glassEffect = !it.glassEffect) },
+    Quick("updateLock", Sym.Lock, R.string.guide_update_lock, { it.updateLock }, { it.rootMode && android.os.Build.VERSION.SDK_INT >= 34 }) { it.copy(updateLock = !it.updateLock) },
+    Quick("localData", Sym.Storage, R.string.settings_built_in_data, { it.loadLocalData }, { it.isDevUnlocked }) { it.copy(loadLocalData = !it.loadLocalData) },
+    Quick("maintenance", Sym.Construction, R.string.settings_maintenance, { it.localMaintenanceMode }, { it.isDevUnlocked }) { it.copy(localMaintenanceMode = !it.localMaintenanceMode) },
 )
 private val DEFAULT_QUICK = listOf("autoUpdate", "wifiOnly", "haptics", "materialYou", "smooth", "compact")
 
@@ -771,9 +774,9 @@ private fun QuickTilesSheet(vm: MainViewModel, s: Settings, onDismiss: () -> Uni
     LaunchedEffect(picked) { if (dragging == null) live = null }
     val tiles = live ?: picked
     fun toggle(id: String) { vm.haptic(H.SELECTION); vm.set { st -> pickedOf(st).let { cur -> st.copy(quickTiles = if (id in cur) cur - id else cur + id) } } }
-    SheetTitle("Quick toggles", Sym.Edit, "Hold and drag to reorder. Tap to add or remove.")
+    SheetTitle(stringResource(R.string.guide_quick_toggles), Sym.Edit, stringResource(R.string.settings_hold_and_drag_to_reorder_tap))
     Column(Modifier.weight(1f, false).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
-        if (tiles.isNotEmpty()) Text("Your tiles", Modifier.padding(start = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = cs.primary)
+        if (tiles.isNotEmpty()) Text(stringResource(R.string.settings_your_tiles), Modifier.padding(start = 8.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = cs.primary)
         tiles.forEachIndexed { i, id -> key(id) {
             val q = QUICK.first { it.id == id }
             SegmentedListItem({ toggle(id) }, ListItemDefaults.segmentedShapes(i, tiles.size),
@@ -783,16 +786,16 @@ private fun QuickTilesSheet(vm: MainViewModel, s: Settings, onDismiss: () -> Uni
                         detectDragGesturesAfterLongPress({ live = live ?: pickedOf(vm.s); dragging = id; dy = 0f; vm.haptic(H.HEAVY) }, ::end, ::end) { c, d -> c.consume(); move(d.y) }
                     },
                 colors = ListItemDefaults.segmentedColors(containerColor = if (dragging == id) cs.primaryContainer else cs.secondaryContainer),
-                leadingContent = { Icon(q.icon, null) }, trailingContent = { Icon(Sym.DragHandle, "Hold to move") }) {
-                Text(q.label, fontWeight = FontWeight.SemiBold)
+                leadingContent = { Icon(q.icon, null) }, trailingContent = { Icon(Sym.DragHandle, stringResource(R.string.settings_hold_to_move)) }) {
+                Text(stringResource(q.label), fontWeight = FontWeight.SemiBold)
             }
         } }
         val rest = QUICK.filter { it.shown(s) && it.id !in tiles }
-        if (rest.isNotEmpty()) Text("Add tiles", Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = cs.primary)
+        if (rest.isNotEmpty()) Text(stringResource(R.string.settings_add_tiles), Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = cs.primary)
         rest.forEachIndexed { i, q ->
             SegmentedListItem({ toggle(q.id) }, ListItemDefaults.segmentedShapes(i, rest.size), colors = ListItemDefaults.segmentedColors(containerColor = cs.surfaceContainerHigh),
                 leadingContent = { Icon(q.icon, null) }, trailingContent = { Icon(Sym.Add, "Add") }) {
-                Text(q.label, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(q.label), fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -817,8 +820,8 @@ private fun Bento(vm: MainViewModel, cat: Cat, shared: @Composable (Cat) -> Modi
                     badge?.let { Badge(containerColor = fg, contentColor = bg) { Text(it, Modifier.padding(horizontal = 4.dp)) } }
                 }
                 Spacer(Modifier.weight(1f))
-                Text(cat.title, style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
-                if (!compact) Text(cat.desc, style = MaterialTheme.typography.bodySmall, color = fg.copy(.8f), maxLines = 2)
+                Text(stringResource(cat.title), style = MaterialTheme.typography.titleLargeEmphasized, maxLines = 1)
+                if (!compact) Text(stringResource(cat.desc), style = MaterialTheme.typography.bodySmall, color = fg.copy(.8f), maxLines = 2)
                 extra()
             }
         }
@@ -840,8 +843,8 @@ private fun Page(cat: Cat, modifier: Modifier, onBack: () -> Unit, content: @Com
                         Spinner(cat.shape, fg.copy(.16f), 72.dp, periodMs = 18_000)
                         Icon(cat.icon, null, Modifier.size(34.dp), tint = fg)
                     }
-                    Text(cat.title, Modifier.padding(start = 24.dp, top = 16.dp), style = MaterialTheme.typography.displaySmallEmphasized)
-                    Text(cat.desc, Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
+                    Text(stringResource(cat.title), Modifier.padding(start = 24.dp, top = 16.dp), style = MaterialTheme.typography.displaySmallEmphasized)
+                    Text(stringResource(cat.desc), Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp), style = MaterialTheme.typography.bodyLarge, color = cs.onSurfaceVariant)
                 }
             }
             Column(Modifier.reveal(1)) { content() }
@@ -853,7 +856,7 @@ private fun Page(cat: Cat, modifier: Modifier, onBack: () -> Unit, content: @Com
 
 /** Auto backup through Android's storage picker: Drive, OneDrive, Proton Drive or any app with a document provider, with no account linking inside Orion. */
 @Composable
-private fun CloudBackup(vm: MainViewModel, s: Settings) = Section("Cloud backup") {
+private fun CloudBackup(vm: MainViewModel, s: Settings) = Section(stringResource(R.string.settings_cloud_backup)) {
     val ctx = LocalContext.current; val scope = rememberCoroutineScope(); val pm = ctx.packageManager
     val uri = s.cloudBackupUri.takeIf { it.isNotEmpty() }?.toUri()
     val where = remember(uri) { uri?.authority?.let { a -> runCatching { pm.resolveContentProvider(a, 0)?.loadLabel(pm)?.toString() }.getOrNull() ?: a } }
@@ -861,16 +864,16 @@ private fun CloudBackup(vm: MainViewModel, s: Settings) = Section("Cloud backup"
     fun connect() = scope.launch {
         val i = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, "orion_identity.osf")
         val u = ResultHost.run(i).let { (code, data) -> data?.data?.takeIf { code == android.app.Activity.RESULT_OK } } ?: return@launch
-        if (runCatching { ctx.contentResolver.takePersistableUriPermission(u, rw) }.isFailure) { vm.error("That storage app does not allow automatic backups. Pick another."); return@launch }
+        if (runCatching { ctx.contentResolver.takePersistableUriPermission(u, rw) }.isFailure) { vm.error(ctx.getString(R.string.settings_that_storage_app_does_not_allow)); return@launch }
         vm.set { it.copy(cloudBackupUri = u.toString(), cloudBackupEvery = it.cloudBackupEvery.takeIf { e -> e != "off" } ?: "week") }; vm.cloudBackup(true)
     }
-    SRow(Sym.Cloud, if (uri == null) "Connect a cloud" else "Backing up to $where", if (uri == null) "Google Drive, OneDrive, Proton Drive or any storage app" else "Tap to pick another file", onClick = ::connect) { Chevron() }
+    SRow(Sym.Cloud, if (uri == null) stringResource(R.string.settings_connect_a_cloud) else stringResource(R.string.settings_backing_up_to, where), if (uri == null) stringResource(R.string.settings_google_drive_onedrive_proton_drive_or) else stringResource(R.string.settings_tap_to_pick_another_file), onClick = ::connect) { Chevron() }
     if (uri != null) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).horizontalScroll(rememberScrollState()).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("off" to "Off", "day" to "Daily", "week" to "Weekly", "month" to "Monthly").forEach { (id, label) -> Choice(s.cloudBackupEvery == id, label) { vm.set { it.copy(cloudBackupEvery = id) } } }
         }
         BackupNowRow(vm, s, where)
-        SRow(Sym.CloudOff, "Disconnect", "Stop backing up. The file in your cloud stays.", onClick = {
+        SRow(Sym.CloudOff, "Disconnect", stringResource(R.string.settings_stop_backing_up_the_file_in), onClick = {
             runCatching { ctx.contentResolver.releasePersistableUriPermission(uri, rw) }; vm.set { it.copy(cloudBackupUri = "", cloudBackupEvery = "off") }
         })
     }
@@ -917,12 +920,12 @@ private fun BackupGlyph(phase: BackupPhase, size: androidx.compose.ui.unit.Dp = 
 private fun BackupNowRow(vm: MainViewModel, s: Settings, where: String?) {
     val scope = rememberCoroutineScope(); val cs = MaterialTheme.colorScheme
     val phase = remember { mutableStateOf(BackupPhase.IDLE) }; val p = phase.value
-    val last = if (s.lastCloudBackup == 0L) "Never backed up" else "Last backup " + android.text.format.DateUtils.getRelativeTimeSpanString(s.lastCloudBackup)
-    val caption = when (p) { BackupPhase.WORKING -> "Sending your identity to ${where ?: "your cloud"}..."; BackupPhase.DONE -> "Backed up just now"; BackupPhase.FAILED -> "Backup failed, tap to try again"; else -> last }
+    val last = if (s.lastCloudBackup == 0L) stringResource(R.string.settings_never_backed_up) else stringResource(R.string.settings_last_backup) + android.text.format.DateUtils.getRelativeTimeSpanString(s.lastCloudBackup)
+    val caption = when (p) { BackupPhase.WORKING -> "Sending your identity to ${where ?: "your cloud"}..."; BackupPhase.DONE -> stringResource(R.string.settings_backed_up_just_now); BackupPhase.FAILED -> stringResource(R.string.settings_backup_failed_tap_to_try_again); else -> last }
     val container by animateColorAsState(if (p == BackupPhase.DONE) androidx.compose.ui.graphics.lerp(cs.surfaceContainer, tonal(Safe).first, .6f) else cs.surfaceContainer,
         MaterialTheme.motionScheme.slowEffectsSpec(), label = "row")
     ListItem(
-        { Text("Back up now", style = MaterialTheme.typography.titleMedium) },
+        { Text(stringResource(R.string.settings_back_up_now), style = MaterialTheme.typography.titleMedium) },
         Modifier.clip(RoundedCornerShape(4.dp)).clickable(p == BackupPhase.IDLE) {
             scope.backupRun(phase, vm) { val before = System.currentTimeMillis(); vm.cloudBackup(true).join(); vm.s.lastCloudBackup >= before }
         },
@@ -1046,7 +1049,7 @@ private fun ThemePicker(vm: MainViewModel, s: Settings) {
 
 /** Modern vs classic store layout, chosen by picture rather than by switch. */
 @Composable
-private fun LayoutPicker(vm: MainViewModel, s: Settings) = Section("Store layout") {
+private fun LayoutPicker(vm: MainViewModel, s: Settings) = Section(stringResource(R.string.settings_store_layout)) {
     val cs = MaterialTheme.colorScheme
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(cs.surfaceContainer).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         listOf("modern" to "Modern", "classic" to "Classic").forEach { (id, label) ->
@@ -1073,12 +1076,12 @@ private fun LayoutPicker(vm: MainViewModel, s: Settings) = Section("Store layout
             }
         }
     }
-    Toggle(Sym.Description, "About this app", "Classic rows preview each app's description, tap See more to read it all", s.showAppAbout) { vm.set { it.copy(showAppAbout = !it.showAppAbout) } }
+    Toggle(Sym.Description, stringResource(R.string.detail_about_this_app), stringResource(R.string.settings_classic_rows_preview_each_app_s), s.showAppAbout) { vm.set { it.copy(showAppAbout = !it.showAppAbout) } }
 }
 
 /** Floating dock size, previewed live at the chosen scale. */
 @Composable
-private fun DockSize(vm: MainViewModel, s: Settings) = Section("Dock size") {
+private fun DockSize(vm: MainViewModel, s: Settings) = Section(stringResource(R.string.guide_dock_size)) {
     val cs = MaterialTheme.colorScheme
     val scale = s.bottomNavScale.takeIf { it.isFinite() } ?: 1f
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(cs.surfaceContainer).padding(16.dp)) {
@@ -1103,39 +1106,39 @@ private fun fontLabel(s: Settings) = if (s.appFont.startsWith("custom:")) s.cust
     else Defaults.FONTS.firstOrNull { it.first == s.appFont }?.second ?: "Space Grotesk"
 
 @Composable
-private fun DevConfigEditor(vm: MainViewModel, s: Settings) = Section("Developer Config Source") {
+private fun DevConfigEditor(vm: MainViewModel, s: Settings) = Section(stringResource(R.string.settings_developer_config_source)) {
     val url = s.devConfigUrl.trim(); val loading = vm.devStatus == "loading"
-    Toggle(Sym.Science, "Enable Dev Config", "Load an isolated config.json URL instead of the production config", s.devConfigEnabled) {
+    Toggle(Sym.Science, stringResource(R.string.settings_enable_dev_config), stringResource(R.string.settings_load_an_isolated_config_json_url), s.devConfigEnabled) {
         vm.set { it.copy(devConfigEnabled = !it.devConfigEnabled) }
     }
     Column(Modifier.clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(s.devConfigUrl, { v -> vm.set { it.copy(devConfigUrl = v) } }, Modifier.fillMaxWidth(), label = { Text("Dev config URL") },
+        OutlinedTextField(s.devConfigUrl, { v -> vm.set { it.copy(devConfigUrl = v) } }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.settings_dev_config_url)) },
             placeholder = { Text("https://example.com/config.json") }, singleLine = true, shape = RoundedCornerShape(16.dp), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(vm::reload, modifier = Modifier.weight(1f), enabled = s.devConfigEnabled && url.isNotEmpty() && !loading, shapes = ButtonDefaults.shapes()) {
-                Text(if (loading) "Reloading..." else "Reload Dev Config")
+                Text(if (loading) "Reloading..." else stringResource(R.string.settings_reload_dev_config))
             }
             OutlinedButton({ vm.set { it.copy(devConfigEnabled = false, devConfigUrl = "") }; vm.devStatus = "idle"; vm.devError = null; vm.reload() }, modifier = Modifier.weight(1f), shapes = ButtonDefaults.shapes()) {
-                Text("Disable and Clear")
+                Text(stringResource(R.string.settings_disable_and_clear))
             }
         }
-        Text(if (s.devConfigEnabled) "Status: ${when (vm.devStatus) { "loading" -> "loading"; "loaded" -> "loaded"; "error" -> "failed"; else -> "idle" }}" else "Status: production mode",
+        Text(if (s.devConfigEnabled) stringResource(R.string.settings_status, when (vm.devStatus) { "loading" -> "loading"; "loaded" -> "loaded"; "error" -> "failed"; else -> "idle" }) else stringResource(R.string.settings_status_production_mode),
             style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        if (s.devConfigEnabled && url.isEmpty()) Text("Enter a config URL to fully isolate testing from production config.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (s.devConfigEnabled && vm.devStatus == "loaded") Text("Last loaded: $url", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (s.devConfigEnabled && url.isEmpty()) Text(stringResource(R.string.settings_enter_a_config_url_to_fully), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (s.devConfigEnabled && vm.devStatus == "loaded") Text(stringResource(R.string.settings_last_loaded, url), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         vm.devError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
     }
 }
 
 @Composable
 private fun FontSheet(vm: MainViewModel, s: Settings, error: String?, importing: Boolean, onImport: () -> Unit, onDismiss: () -> Unit) = OrionSheet(onDismiss) {
-    SheetTitle("Fonts", Sym.FontDownload, "Select app typeface")
+    SheetTitle("Fonts", Sym.FontDownload, stringResource(R.string.settings_select_app_typeface))
     LazyColumn(Modifier.heightIn(max = 560.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         item {
             Card(Modifier.fillMaxWidth().padding(bottom = 10.dp), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)) {
                 Column(Modifier.padding(20.dp)) {
-                    Text("Aa Bb Gg 123", style = MaterialTheme.typography.displaySmallEmphasized)
-                    Text("The quick brown fox jumps over the lazy dog.", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.settings_aa_bb_gg_123), style = MaterialTheme.typography.displaySmallEmphasized)
+                    Text(stringResource(R.string.settings_the_quick_brown_fox_jumps_over), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -1145,7 +1148,7 @@ private fun FontSheet(vm: MainViewModel, s: Settings, error: String?, importing:
                 Modifier.clip(RoundedCornerShape(if (on) 24.dp else 8.dp)).clickable { vm.haptic(H.SELECTION); vm.set { it.copy(appFont = key) } },
                 supportingContent = tag?.let { { Text(it) } },
                 trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) {
-                    onDelete?.let { IconButton(it) { Icon(Sym.DeleteOutline, "Delete $label") } }
+                    onDelete?.let { IconButton(it) { Icon(Sym.DeleteOutline, stringResource(R.string.settings_delete, label)) } }
                     if (on) Icon(Sym.CheckCircle, null, tint = MaterialTheme.colorScheme.primary)
                 } },
                 colors = ListItemDefaults.colors(containerColor = if (on) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainer))
@@ -1154,7 +1157,7 @@ private fun FontSheet(vm: MainViewModel, s: Settings, error: String?, importing:
         items(s.customFonts, key = { it.id }) { f -> FontRow("custom:${f.id}", f.name, "Custom") { vm.set { it.removeCustomFont(f.id) } } }
         item {
             OutlinedButton(onImport, modifier = Modifier.fillMaxWidth().padding(top = 10.dp), enabled = !importing, shapes = ButtonDefaults.shapes()) {
-                Icon(Sym.Upload, null); Spacer(Modifier.width(8.dp)); Text(if (importing) "Importing..." else "Import Custom Font")
+                Icon(Sym.Upload, null); Spacer(Modifier.width(8.dp)); Text(if (importing) "Importing..." else stringResource(R.string.settings_import_custom_font))
             }
             error?.let { Text(it, Modifier.padding(8.dp), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1174,7 +1177,7 @@ private fun DirectInstallSheet(vm: MainViewModel, onDismiss: () -> Unit) = Orion
     var wifi by remember { mutableStateOf(WirelessAdb.onWifi(ctx)) }; var dev by remember { mutableStateOf(WirelessAdb.devOptions(ctx)) }
     var wl by remember { mutableStateOf(WirelessAdb.wirelessOn(ctx)) }
     var code by remember { mutableStateOf("") }; var enabled by remember { mutableStateOf(false) }
-    fun enable() { if (enabled) return; enabled = true; vm.set { it.copy(directInstall = true) }; vm.haptic(H.SUCCESS); vm.toast("Installs now skip the 24-hour wait"); close() }
+    fun enable() { if (enabled) return; enabled = true; vm.set { it.copy(directInstall = true) }; vm.haptic(H.SUCCESS); vm.toast(ctx.getString(R.string.settings_installs_now_skip_the_24_hour)); close() }
     // Already paired: no setup needed
     LaunchedEffect(Unit) { if (runCatching { WirelessAdb.connect(ctx) }.isSuccess) enable() }
     LaunchedEffect(st.phase) { if (st.phase == WirelessAdb.Phase.READY) enable() }
@@ -1182,26 +1185,26 @@ private fun DirectInstallSheet(vm: MainViewModel, onDismiss: () -> Unit) = Orion
     LaunchedEffect(Unit) { while (true) { delay(1000); wifi = WirelessAdb.onWifi(ctx); dev = WirelessAdb.devOptions(ctx); wl = WirelessAdb.wirelessOn(ctx) } }
 
     Column(Modifier.padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
-        Text("Skip the 24-hour wait", Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.headlineSmallEmphasized)
-        Text("One-time setup. Orion installs through Wireless debugging, the ADB route Google leaves open, so apps install right away.",
+        Text(stringResource(R.string.guide_skip_the_24_hour_wait), Modifier.padding(horizontal = 8.dp), style = MaterialTheme.typography.headlineSmallEmphasized)
+        Text(stringResource(R.string.settings_one_time_setup_orion_installs_through),
             Modifier.padding(horizontal = 8.dp).padding(top = 4.dp, bottom = 16.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            SetupStep(1, "Connect to Wi-Fi", if (wifi) "Connected" else "Wireless debugging only works on Wi-Fi.", wifi)
-            SetupStep(2, "Unlock Developer options", if (dev) "Unlocked" else "Tap Build number 7 times in About phone.", dev)
-            SetupStep(3, "Turn on Wireless debugging", if (wl) "On" else "Switch it on and tap Allow.", wl)
-            SetupStep(4, "Pair Orion", "Tap Pair device with pairing code, then type the code into Orion's notification.", st.phase == WirelessAdb.Phase.READY)
+            SetupStep(1, stringResource(R.string.settings_connect_to_wi_fi), if (wifi) "Connected" else stringResource(R.string.settings_wireless_debugging_only_works_on_wi), wifi)
+            SetupStep(2, stringResource(R.string.settings_unlock_developer_options), if (dev) "Unlocked" else stringResource(R.string.settings_tap_build_number_7_times_in), dev)
+            SetupStep(3, stringResource(R.string.settings_turn_on_wireless_debugging), if (wl) "On" else stringResource(R.string.settings_switch_it_on_and_tap_allow), wl)
+            SetupStep(4, stringResource(R.string.settings_pair_orion), stringResource(R.string.settings_tap_pair_device_with_pairing_code), st.phase == WirelessAdb.Phase.READY)
         }
-        Text("Orion's notification walks you through each step and moves on by itself.", Modifier.padding(8.dp),
+        Text(stringResource(R.string.settings_orion_s_notification_walks_you_through), Modifier.padding(8.dp),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick = { WirelessAdb.startSetup(ctx) }, modifier = Modifier.fillMaxWidth(), enabled = wifi && st.phase != WirelessAdb.Phase.PAIRING, shapes = ButtonDefaults.shapes()) {
-            Text(if (st.phase == WirelessAdb.Phase.IDLE) "Start setup" else "Continue")
+            Text(if (st.phase == WirelessAdb.Phase.IDLE) stringResource(R.string.settings_start_setup) else "Continue")
         }
         if (st.phase == WirelessAdb.Phase.PAIRING || st.phase == WirelessAdb.Phase.FAILED) Row(Modifier.padding(8.dp).padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (st.phase == WirelessAdb.Phase.PAIRING) { LoadingIndicator(Modifier.size(32.dp)); Spacer(Modifier.width(8.dp)) }
             Text(st.msg, color = if (st.phase == WirelessAdb.Phase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         }
         OutlinedTextField(code, { code = it.filter(Char::isDigit).take(6) }, Modifier.fillMaxWidth().padding(top = 12.dp), singleLine = true,
-            label = { Text("Or type the code here (split screen)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            label = { Text(stringResource(R.string.settings_or_type_the_code_here_split)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             trailingIcon = { TextButton({ WirelessAdb.pairAsync(ctx, code) }, enabled = code.length == 6 && st.phase != WirelessAdb.Phase.PAIRING) { Text("Pair") } })
     }
     Spacer(Modifier.navigationBarsPadding().height(16.dp))
@@ -1224,19 +1227,19 @@ private fun SetupStep(n: Int, title: String, desc: String, done: Boolean, action
 private fun InstallerSheet(vm: MainViewModel, s: Settings, step: String, setStep: (String) -> Unit, list: List<Installer>, loading: Boolean, error: String?, onDismiss: () -> Unit) = OrionSheet(onDismiss) {
     Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         BackHandler(step == "specific") { setStep("mode") }
-        Text("Choose Installer", Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.headlineSmallEmphasized)
-        if (step == "specific" && s.hiddenInstallers.isNotEmpty()) IconButton({ vm.set { it.copy(hiddenInstallers = emptyList()) } }) { Icon(Sym.RestartAlt, "Reset Hidden Installers") }
+        Text(stringResource(R.string.settings_choose_installer), Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.headlineSmallEmphasized)
+        if (step == "specific" && s.hiddenInstallers.isNotEmpty()) IconButton({ vm.set { it.copy(hiddenInstallers = emptyList()) } }) { Icon(Sym.RestartAlt, stringResource(R.string.settings_reset_hidden_installers)) }
     }
     AnimatedContent(step, label = "step") { st ->
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (st == "mode") {
-                Selectable(s.installerPreference == "system", "System Installer") { vm.set { it.withInstaller("system") }; onDismiss() }
-                Selectable(s.installerPreference == "chooser", "Ask Every Time") { vm.set { it.withInstaller("chooser") }; onDismiss() }
-                Selectable(s.installerPreference == "package", "Specific Installer", if (s.installerPreference == "package") s.installerLabel.ifEmpty { "Selected" } else null) { setStep("specific") }
+                Selectable(s.installerPreference == "system", stringResource(R.string.settings_system_installer)) { vm.set { it.withInstaller("system") }; onDismiss() }
+                Selectable(s.installerPreference == "chooser", stringResource(R.string.settings_ask_every_time)) { vm.set { it.withInstaller("chooser") }; onDismiss() }
+                Selectable(s.installerPreference == "package", stringResource(R.string.settings_specific_installer), if (s.installerPreference == "package") s.installerLabel.ifEmpty { "Selected" } else null) { setStep("specific") }
             } else when {
                 loading -> Row(Modifier.fillMaxWidth().padding(24.dp), horizontalArrangement = Arrangement.Center) { LoadingIndicator(); Text("Loading...", Modifier.padding(start = 12.dp)) }
                 error != null -> Text(error, color = MaterialTheme.colorScheme.error)
-                list.isEmpty() -> EmptyState(Sym.Android, "No installers found.")
+                list.isEmpty() -> EmptyState(Sym.Android, stringResource(R.string.settings_no_installers_found))
                 else -> LazyColumn(Modifier.heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val shown = list.filter { it.packageName !in s.hiddenInstallers }
                     items(shown, key = { it.packageName }) { ins ->
@@ -1253,7 +1256,7 @@ private fun InstallerSheet(vm: MainViewModel, s: Settings, step: String, setStep
 @Composable
 private fun InstallerRow(vm: MainViewModel, ins: Installer, selected: Boolean, hint: Boolean, onSelect: () -> Unit, onRemove: () -> Unit) {
     val icon by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, ins.packageName) { value = withContext(Dispatchers.IO) { vm.tracker.icon(ins.packageName)?.asImageBitmap() } }
-    SwipeRow(RoundedCornerShape(20.dp), right = SwipeAction(Sym.VisibilityOff, "Hide installer", MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.onError, removes = true, run = onRemove), hint = hint) {
+    SwipeRow(RoundedCornerShape(20.dp), right = SwipeAction(Sym.VisibilityOff, stringResource(R.string.settings_hide_installer), MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.onError, removes = true, run = onRemove), hint = hint) {
         ListItem({ Text(ins.label, fontWeight = FontWeight.Bold) }, Modifier.clickable(onClick = onSelect),
             supportingContent = { Text(ins.packageName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingContent = { icon?.let { Image(it, null, Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))) } ?: TonalIcon(Sym.Android, MaterialTheme.colorScheme.primary) },
@@ -1276,23 +1279,23 @@ private fun ScannerSheet(apps: List<AppItem>, onDismiss: () -> Unit) = OrionShee
         results = runCatalogDiagnostic(apps) { p, t -> progress = p; total = t }
         scanning = false; done = true
     }
-    SheetTitle("Mission Scanner (Admin)", Sym.Radar)
+    SheetTitle(stringResource(R.string.settings_mission_scanner_admin), Sym.Radar)
     Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
         when {
             scanning -> {
-                Text("Scanning Catalog...", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_scanning_catalog), style = MaterialTheme.typography.titleMedium)
                 LinearWavyProgressIndicator({ if (total == 0) 0f else progress / total.toFloat() }, Modifier.fillMaxWidth().padding(vertical = 12.dp))
-                Text("$progress / $total apps checked", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_apps_checked, progress, total), style = MaterialTheme.typography.bodySmall)
             }
             done -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Scan Complete", style = MaterialTheme.typography.titleMedium)
-                        Text("Found ${results.size} apps with issues out of $total.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.settings_scan_complete), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.settings_found_apps_with_issues_out_of, results.size, total), style = MaterialTheme.typography.bodySmall)
                     }
-                    FilledTonalButton(::start, shapes = ButtonDefaults.shapes()) { Text("Scan Again") }
+                    FilledTonalButton(::start, shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_scan_again)) }
                 }
-                if (results.isEmpty()) Text("Everything looks perfect!", Modifier.padding(vertical = 24.dp), color = Safe, fontWeight = FontWeight.Bold)
+                if (results.isEmpty()) Text(stringResource(R.string.settings_everything_looks_perfect), Modifier.padding(vertical = 24.dp), color = Safe, fontWeight = FontWeight.Bold)
                 else LazyColumn(Modifier.heightIn(max = 480.dp).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(results, key = { it.appId }) { r ->
                         Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.errorContainer.copy(.4f))) {
@@ -1305,10 +1308,10 @@ private fun ScannerSheet(apps: List<AppItem>, onDismiss: () -> Unit) = OrionShee
                 }
             }
             else -> {
-                Text("Ready to Scan", style = MaterialTheme.typography.titleMedium)
-                Text("This will run a diagnostic on all ${apps.size} apps in your catalog, checking for missing text and sending HTTP HEAD requests to verify URLs.",
+                Text(stringResource(R.string.settings_ready_to_scan), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_this_will_run_a_diagnostic_on, apps.size),
                     Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(::start, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shapes = ButtonDefaults.shapes()) { Text("Run Diagnostic Now") }
+                Button(::start, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shapes = ButtonDefaults.shapes()) { Text(stringResource(R.string.settings_run_diagnostic_now)) }
             }
         }
     }

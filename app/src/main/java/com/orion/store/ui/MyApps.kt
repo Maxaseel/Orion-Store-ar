@@ -17,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.orion.store.R
 import com.orion.store.data.*
 
 private val Sky = Color(0xFF0EA5E9)
@@ -27,7 +29,7 @@ private fun filterIcon(f: MyAppsFilter) = when (f) {
     MyAppsFilter.ALL -> Sym.Inventory2; MyAppsFilter.INSTALLED -> Sym.CheckCircle
     MyAppsFilter.DOWNLOADED -> Sym.Download; MyAppsFilter.UPDATES -> Sym.ArrowUpward
 }
-private val EMPTY = mapOf(MyAppsFilter.ALL to "No apps yet", MyAppsFilter.INSTALLED to "No installed apps", MyAppsFilter.DOWNLOADED to "No downloaded apps", MyAppsFilter.UPDATES to "No pending updates")
+private val EMPTY = mapOf(MyAppsFilter.ALL to R.string.myapps_no_apps_yet, MyAppsFilter.INSTALLED to R.string.myapps_no_installed_apps, MyAppsFilter.DOWNLOADED to R.string.myapps_no_downloaded_apps, MyAppsFilter.UPDATES to R.string.myapps_no_pending_updates)
 
 @Composable
 private fun tone(r: MyAppRow): Pair<ImageVector, Color> = when {
@@ -64,15 +66,15 @@ fun MyAppsTab(vm: MainViewModel, padding: PaddingValues) {
             }
         }
         if (filter == MyAppsFilter.UPDATES && pending.isNotEmpty()) item {
-            CtaButton("Update all (${pending.size})", { vm.haptic(H.MEDIUM); pending.forEach { vm.download(it.app) } }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp), Sym.SystemUpdate)
+            CtaButton(stringResource(R.string.myapps_update_all, pending.size), { vm.haptic(H.MEDIUM); pending.forEach { vm.download(it.app) } }, Modifier.padding(horizontal = 16.dp, vertical = 4.dp), Sym.SystemUpdate)
         }
         if (vm.loading) item("loading") { StoreSkeleton(false) }
         else if (visible.isEmpty()) item {
             if (query.isNotBlank()) Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Sym.SearchOff, null, Modifier.size(48.dp), tint = cs.onSurfaceVariant)
-                Text("No apps matching “$query”", Modifier.padding(top = 12.dp), style = MaterialTheme.typography.titleMedium)
-                TextButton({ vm.libraryQuery = "" }) { Text("Clear search") }
-            } else EmptyState(filterIcon(filter), EMPTY.getValue(filter), if (filter == MyAppsFilter.ALL) "Apps you download from Orion show up here." else null, Modifier.padding(top = 32.dp))
+                Text(stringResource(R.string.myapps_no_apps_matching, query), Modifier.padding(top = 12.dp), style = MaterialTheme.typography.titleMedium)
+                TextButton({ vm.libraryQuery = "" }) { Text(stringResource(R.string.guide_clear_search)) }
+            } else EmptyState(filterIcon(filter), stringResource(EMPTY.getValue(filter)), if (filter == MyAppsFilter.ALL) stringResource(R.string.myapps_apps_you_download_from_orion_show) else null, Modifier.padding(top = 32.dp))
         }
         itemsIndexed(visible, key = { _, it -> it.app.id }) { i, r -> LibraryRow(vm, r, Modifier.animateItem().reveal(i)) }
         // Ignored updates: listed with a one-tap undo, under All and Updates where a missing update would be noticed
@@ -80,11 +82,11 @@ fun MyAppsTab(vm: MainViewModel, padding: PaddingValues) {
         val ignored = if (filter == MyAppsFilter.ALL || filter == MyAppsFilter.UPDATES)
             s.ignoredUpdates.keys.mapNotNull { id -> lookup[id]?.takeIf { isUpdateIgnored(it, s, now) } } else emptyList()
         if (ignored.isNotEmpty()) item("ignored-title") {
-            Text("Ignored updates · ${ignored.size}", Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMediumEmphasized)
+            Text(stringResource(R.string.myapps_ignored_updates, ignored.size), Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMediumEmphasized)
         }
         // Segmented items draw their own rounded container, so the corners come out the same on every GPU instead of depending on clip support
         itemsIndexed(ignored, key = { _, a -> "ignored-${a.id}" }) { i, a ->
-            val until = when (s.ignoredUpdates[a.id]?.type) { "week" -> "Hidden for a week"; "version" -> "Hidden until the next version"; else -> "Hidden for good" }
+            val until = when (s.ignoredUpdates[a.id]?.type) { "week" -> stringResource(R.string.myapps_hidden_for_a_week); "version" -> stringResource(R.string.myapps_hidden_until_the_next_version); else -> stringResource(R.string.myapps_hidden_for_good) }
             SegmentedListItem({ vm.selectApp(a) }, ListItemDefaults.segmentedShapes(i, ignored.size), Modifier.animateItem().padding(horizontal = 16.dp),
                 supportingContent = { Text(until) }, leadingContent = { AppIcon(a, if (s.compactMode) 36.dp else 44.dp) },
                 trailingContent = { FilledTonalButton({ vm.set { it.copy(ignoredUpdates = it.ignoredUpdates - a.id) }; vm.haptic(H.SUCCESS) }, shapes = ButtonDefaults.shapes(),
@@ -112,16 +114,16 @@ private fun LibraryRow(vm: MainViewModel, r: MyAppRow, modifier: Modifier) {
                 }
             }
             val action = r.primaryAction
-            if (r.hasSavedApk && action in setOf("install", "update", "download")) IconButton({ vm.deleteLibraryApk(r.app) }) { Icon(Sym.DeleteOutline, "Delete APK") }
+            if (r.hasSavedApk && action in setOf("install", "update", "download")) IconButton({ vm.deleteLibraryApk(r.app) }) { Icon(Sym.DeleteOutline, stringResource(R.string.detail_delete_apk)) }
             @Composable fun Primary(label: String, onClick: () -> Unit) =
                 FilledTonalButton(onClick, shapes = ButtonDefaults.shapes(), contentPadding = ButtonDefaults.SmallContentPadding) { Text(label) }
             when {
-                r.status == "downloading" -> FilledTonalIconButton({ vm.cancelDownload(r.app.id) }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.Close, "Cancel download") }
+                r.status == "downloading" -> FilledTonalIconButton({ vm.cancelDownload(r.app.id) }, shapes = IconButtonDefaults.shapes()) { Icon(Sym.Close, stringResource(R.string.detail_cancel_download)) }
                 action == "install" -> Primary("Install") { r.savedFile?.let { vm.installFile(r.app, it) } }
                 action == "update" -> Primary("Update") { vm.download(r.app) }
                 action == "download" -> Primary("Download") { vm.download(r.app) }
-                action == "delete" -> IconButton({ vm.deleteLibraryApk(r.app) }) { Icon(Sym.DeleteOutline, "Delete APK") }
-                else -> Icon(Sym.ChevronRight, "Open details", tint = cs.onSurfaceVariant)
+                action == "delete" -> IconButton({ vm.deleteLibraryApk(r.app) }) { Icon(Sym.DeleteOutline, stringResource(R.string.detail_delete_apk)) }
+                else -> Icon(Sym.ChevronRight, stringResource(R.string.myapps_open_details), tint = cs.onSurfaceVariant)
             }
         }
         if (r.status == "downloading") Row(Modifier.padding(start = if (compact) 52.dp else 68.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {

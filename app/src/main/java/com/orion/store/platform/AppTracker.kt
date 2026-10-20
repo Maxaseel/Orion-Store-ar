@@ -21,6 +21,7 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
+import com.orion.store.R
 import com.orion.store.data.Net
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -138,7 +139,7 @@ class AppTracker(private val ctx: Context) {
             else -> handlers.firstOrNull { isSys(it.applicationInfo) && "packageinstaller" in it.packageName }
                 ?: handlers.firstOrNull { "packageinstaller" in it.packageName } ?: handlers.firstOrNull { isSys(it.applicationInfo) }
         }
-        val intent = pick?.let { Intent(base).setClassName(it.packageName, it.name) } ?: Intent.createChooser(base, "Install App")
+        val intent = pick?.let { Intent(base).setClassName(it.packageName, it.name) } ?: Intent.createChooser(base, ctx.getString(R.string.apptracker_install_app))
         when (ResultHost.run(intent).first) {
             Activity.RESULT_OK -> Unit
             Activity.RESULT_CANCELED -> throw NativeError("INSTALL_CANCELED")
@@ -171,7 +172,7 @@ class AppTracker(private val ctx: Context) {
     suspend fun requestElevated() {
         if (root) return
         try {
-            if (!Shizuku.pingBinder()) throw NativeError("Shizuku is NOT running. Start Shizuku app first.")
+            if (!Shizuku.pingBinder()) throw NativeError(ctx.getString(R.string.apptracker_shizuku_is_not_running_start_shizuku))
             if (Shizuku.checkSelfPermission() == GRANTED) return
             val ok = suspendCancellableCoroutine { c ->
                 val l = object : Shizuku.OnRequestPermissionResultListener {
@@ -183,8 +184,8 @@ class AppTracker(private val ctx: Context) {
                 Shizuku.addRequestPermissionResultListener(l); Shizuku.requestPermission(SHIZUKU_CODE)
                 c.invokeOnCancellation { Shizuku.removeRequestPermissionResultListener(l) }
             }
-            if (!ok) throw NativeError("User denied Shizuku permission.")
-        } catch (e: NativeError) { throw e } catch (e: Throwable) { throw NativeError("Shizuku Error (Check Manifest/Provider): ${e.message}") }
+            if (!ok) throw NativeError(ctx.getString(R.string.apptracker_user_denied_shizuku_permission))
+        } catch (e: NativeError) { throw e } catch (e: Throwable) { throw NativeError(ctx.getString(R.string.apptracker_shizuku_error_check_manifest_provider, e.message)) }
     }
 
     private fun sh(cmd: String): Process = if (root) Runtime.getRuntime().exec(arrayOf("su", "-c", cmd)) else Shizuku::class.java
@@ -195,8 +196,8 @@ class AppTracker(private val ctx: Context) {
 
     private fun requireShizuku() {
         if (root) return
-        if (!shizukuRunning()) throw NativeError("Shizuku not running")
-        if (Shizuku.checkSelfPermission() != GRANTED) throw NativeError("Shizuku permission missing")
+        if (!shizukuRunning()) throw NativeError(ctx.getString(R.string.apptracker_shizuku_not_running))
+        if (Shizuku.checkSelfPermission() != GRANTED) throw NativeError(ctx.getString(R.string.apptracker_shizuku_permission_missing))
     }
 
     /** Streams the APK into `pm install`. Root also records Orion as the installer, so Android's "App details in store" and update ownership point here. */
@@ -211,14 +212,14 @@ class AppTracker(private val ctx: Context) {
         var (code, err) = attempt(owner)
         // Some ROMs ship a pm without --update-ownership: install anyway rather than fail the update
         if (code != 0 && "update-ownership" in err) attempt(owner.replace(" --update-ownership", "")).let { code = it.first; err = it.second }
-        if (code != 0) throw NativeError("Install failed (Code $code): $err")
+        if (code != 0) throw NativeError(ctx.getString(R.string.apptracker_install_failed_code, code, err))
     }
 
     /** Root: reinstalls an app's own APKs with Orion as installer. Same signature and version, so data stays; Orion then owns its updates. */
     suspend fun adopt(pkg: String) = withContext(Dispatchers.IO) {
-        val dir = File(pm.getApplicationInfo(pkg, 0).sourceDir).parent ?: throw NativeError("No APK path")
+        val dir = File(pm.getApplicationInfo(pkg, 0).sourceDir).parent ?: throw NativeError(ctx.getString(R.string.apptracker_no_apk_path))
         val p = sh("pm install -r -i ${ctx.packageName} \"$dir\"/*.apk")
-        val code = p.waitFor(); if (code != 0) throw NativeError("Adopt failed (Code $code): ${p.err()}")
+        val code = p.waitFor(); if (code != 0) throw NativeError(ctx.getString(R.string.apptracker_adopt_failed_code, code, p.err()))
     }
 
     /** Root or Shizuku: user apps Orion did not install, as package to installer label. */
@@ -233,7 +234,7 @@ class AppTracker(private val ctx: Context) {
 
     /** Frees cache across every app at once: Android trims until the requested space is free. */
     suspend fun trimCaches() = withContext(Dispatchers.IO) {
-        requireShizuku(); val p = sh("pm trim-caches 1024G"); if (p.waitFor() != 0) throw NativeError("Trim failed: ${p.err()}")
+        requireShizuku(); val p = sh("pm trim-caches 1024G"); if (p.waitFor() != 0) throw NativeError(ctx.getString(R.string.apptracker_trim_failed, p.err()))
     }
 
     // Sentinel
@@ -258,11 +259,11 @@ class AppTracker(private val ctx: Context) {
     suspend fun toggleSystemApp(pkg: String, enable: Boolean) = withContext(Dispatchers.IO) {
         requireShizuku()
         val p = sh(if (enable) "cmd package install-existing $pkg" else "pm uninstall -k --user 0 $pkg")
-        val exit = p.waitFor(); if (exit != 0) throw NativeError("Operation failed (Code $exit): ${p.err()}")
+        val exit = p.waitFor(); if (exit != 0) throw NativeError(ctx.getString(R.string.apptracker_operation_failed_code, exit, p.err()))
     }
 
     suspend fun revokePermission(pkg: String, perm: String) = withContext(Dispatchers.IO) {
-        requireShizuku(); if (sh("pm revoke $pkg $perm").waitFor() != 0) throw NativeError("Revoke failed. App might crash or restart.")
+        requireShizuku(); if (sh("pm revoke $pkg $perm").waitFor() != 0) throw NativeError(ctx.getString(R.string.apptracker_revoke_failed_app_might_crash_or))
     }
 
     @Suppress("DEPRECATION")
@@ -276,12 +277,12 @@ class AppTracker(private val ctx: Context) {
             // Note: falls back to app-private Downloads when public storage is not writable (scoped storage), path stays readable for hashing
             val out = runCatching { File(ai.sourceDir).copyTo(dest, true) }.getOrElse { File(ai.sourceDir).copyTo(File(Downloads.dir(), name), true) }
             out.absolutePath
-        } catch (e: Exception) { throw NativeError("Extraction failed: ${e.message}") }
+        } catch (e: Exception) { throw NativeError(ctx.getString(R.string.apptracker_extraction_failed, e.message)) }
     }
 
     fun hash(path: String): String {
-        val f = File(path); if (!f.exists()) throw NativeError("File not found")
-        return hashOrNull(f) ?: throw NativeError("Hash failed")
+        val f = File(path); if (!f.exists()) throw NativeError(ctx.getString(R.string.apptracker_file_not_found))
+        return hashOrNull(f) ?: throw NativeError(ctx.getString(R.string.apptracker_hash_failed))
     }
 
     private fun hashOrNull(f: File): String? = runCatching {
@@ -292,7 +293,7 @@ class AppTracker(private val ctx: Context) {
 
     /** Returns (httpStatus, body), mirrors uploadVirusTotalFile including the 32 MB upload_url hop. */
     suspend fun vtUpload(path: String, apiKey: String): Pair<Int, String> = withContext(Dispatchers.IO) {
-        if (path.isEmpty() || apiKey.isEmpty()) throw NativeError("Missing args")
+        if (path.isEmpty() || apiKey.isEmpty()) throw NativeError(ctx.getString(R.string.apptracker_missing_args))
         val f = File(path).canonicalFile; if (!f.exists() || !f.canRead()) throw NativeError("FILE_MISSING")
         var uploadUrl = "https://www.virustotal.com/api/v3/files"
         if (f.length() >= 32L * 1024 * 1024) {
@@ -300,17 +301,17 @@ class AppTracker(private val ctx: Context) {
             try {
                 c.newCall(Request.Builder().url("https://www.virustotal.com/api/v3/files/upload_url").header("x-apikey", apiKey).header("Accept", "application/json").build()).execute().use { r ->
                     val b = r.body.string()
-                    if (!r.isSuccessful) return@withContext r.code to b.ifEmpty { "Failed to retrieve upload URL" }
+                    if (!r.isSuccessful) return@withContext r.code to b.ifEmpty { ctx.getString(R.string.apptracker_failed_to_retrieve_upload_url) }
                     uploadUrl = com.orion.store.data.json.parseToJsonElement(b).jsonObject["data"]!!.jsonPrimitive.content
                 }
-            } catch (e: Exception) { throw NativeError("Failed to obtain VirusTotal upload URL: ${e.message}") }
+            } catch (e: Exception) { throw NativeError(ctx.getString(R.string.apptracker_failed_to_obtain_virustotal_upload_url, e.message)) }
         }
         val c = Net.client.newBuilder().callTimeout(0, TimeUnit.MILLISECONDS).connectTimeout(30, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).writeTimeout(0, TimeUnit.MILLISECONDS).build()
         val body = MultipartBody.Builder("----orionvt" + System.currentTimeMillis()).setType(MultipartBody.FORM)
             .addFormDataPart("file", f.name, f.asRequestBody(APK_MIME.toMediaType())).build()
         try {
             c.newCall(Request.Builder().url(uploadUrl).post(body).header("x-apikey", apiKey).header("Accept", "application/json").build()).execute().use { it.code to it.body.string() }
-        } catch (e: Exception) { throw NativeError(e.message ?: "Upload failed") }
+        } catch (e: Exception) { throw NativeError(e.message ?: ctx.getString(R.string.apptracker_upload_failed)) }
     }
 
     /** Walks shared storage hashing files over 1 KB, emitting batches of 50 (scanResultBatch / scanComplete). */
@@ -362,23 +363,23 @@ class AppTracker(private val ctx: Context) {
     @Suppress("DEPRECATION")
     suspend fun exportFile(name: String): String = withContext(Dispatchers.IO) {
         val src = Downloads.file(name) ?: throw NativeError("INVALID_FILE_NAME")
-        if (!src.exists()) throw NativeError("File not found")
+        if (!src.exists()) throw NativeError(ctx.getString(R.string.apptracker_file_not_found))
         try {
             val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).apply { mkdirs() }
             val dot = name.lastIndexOf('.'); val stem = if (dot > 0) name.take(dot) else name; val ext = if (dot > 0) name.substring(dot) else ""
             var dest = File(pub, name); var i = 1
             while (dest.exists()) dest = File(pub, "${stem}_${i++}$ext")
             src.copyTo(dest)
-            if (dest.length() != src.length()) throw NativeError("Verification failed")
+            if (dest.length() != src.length()) throw NativeError(ctx.getString(R.string.apptracker_verification_failed))
             src.delete(); dest.absolutePath
-        } catch (e: NativeError) { throw e } catch (e: Exception) { throw NativeError("Export failed: ${e.message}") }
+        } catch (e: NativeError) { throw e } catch (e: Exception) { throw NativeError(ctx.getString(R.string.apptracker_export_failed, e.message)) }
     }
 
     suspend fun saveFile(content: String, fileName: String) {
         val i = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, fileName)
         val (code, data) = ResultHost.run(i)
         val uri: Uri = data?.data?.takeIf { code == Activity.RESULT_OK } ?: throw NativeError("Cancelled")
-        withContext(Dispatchers.IO) { (ctx.contentResolver.openOutputStream(uri) ?: throw NativeError("Stream error")).use { it.write(content.toByteArray()) } }
+        withContext(Dispatchers.IO) { (ctx.contentResolver.openOutputStream(uri) ?: throw NativeError(ctx.getString(R.string.apptracker_stream_error))).use { it.write(content.toByteArray()) } }
     }
 
     fun setHighRefreshRate(a: Activity, enable: Boolean) {
@@ -395,7 +396,7 @@ class AppTracker(private val ctx: Context) {
     fun share(title: String, text: String, url: String) = ctx.startActivity(
         Intent.createChooser(Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT, "$text $url").setType("text/plain"), title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
-    fun launch(pkg: String) = ctx.startActivity((pm.getLaunchIntentForPackage(pkg) ?: pm.getLeanbackLaunchIntentForPackage(pkg) ?: throw NativeError("App not found")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    fun launch(pkg: String) = ctx.startActivity((pm.getLaunchIntentForPackage(pkg) ?: pm.getLeanbackLaunchIntentForPackage(pkg) ?: throw NativeError(ctx.getString(R.string.apptracker_app_not_found))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     fun uninstall(pkg: String) = ctx.startActivity(Intent(Intent.ACTION_DELETE, "package:$pkg".toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     fun open(url: String) = runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
 
