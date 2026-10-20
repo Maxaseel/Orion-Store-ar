@@ -73,7 +73,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.RoundedPolygon
+import com.orion.store.Lang
 import com.orion.store.R
+import com.orion.store.findActivity
 import com.orion.store.data.*
 import com.orion.store.platform.Installer
 import com.orion.store.platform.WirelessAdb
@@ -504,6 +506,14 @@ fun SettingsScreen(vm: MainViewModel) {
                         }
                     }
                     "visuals" -> {
+                        Section(stringResource(R.string.settings_language)) {
+                            val lctx = LocalContext.current
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainer).horizontalScroll(rememberScrollState()).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("" to stringResource(R.string.settings_language_system_default), "en" to "English", "es" to "Español").forEach { (tag, label) ->
+                                    Choice(Lang.tag(lctx) == tag, label) { Lang.set(lctx, tag); if (android.os.Build.VERSION.SDK_INT < 33) lctx.findActivity()?.recreate() }
+                                }
+                            }
+                        }
                         ThemePicker(vm, s)
                         PalettePicker(vm, s)
                         Section(stringResource(R.string.settings_color_type)) {

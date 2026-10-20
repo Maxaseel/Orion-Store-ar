@@ -1,0 +1,7 @@
+# Crowdin configuration for Orion Store.
+# Source strings live in the default values folder; translations are synced back
+# into per-language values folders (values-es, values-de, ...) by the Crowdin
+# GitHub integration, which opens pull requests against this repository.
+files:
+  - source: /app/src/main/res/values/strings.xml
+    translation: /app/src/main/res/values-%two_letters_code%/strings.xml
