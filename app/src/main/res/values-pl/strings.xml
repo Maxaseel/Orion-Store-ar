@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Sklep Orion</string>
-    <string name="about_active_mirror">Active Mirror</string>
+    <string name="about_active_mirror">Aktywne Lustro</string>
     <string name="about_add_badge">Dodaj odznakę</string>
     <string name="about_alias_secured">" Alias Zabezpieczony"</string>
     <string name="about_be_the_first_legend_to_rise">Bądź pierwszą legendą, która wzrośnie!</string>
     <string name="about_beam_me_up">Beam Me Up!</string>
     <string name="about_buy_me_a_coffee">Wesprzyj projekt</string>
     <string name="about_cache_empty">Pusta pamięć podręczna</string>
-    <string name="about_captain_code">Captain Code</string>
+    <string name="about_captain_code">Kapitan Kod</string>
     <string name="about_check_package">Sprawdź pakiet</string>
     <string name="about_choose_a_payment_method_to_support">Wybierz metodę płatności, aby wesprzeć rozwój aplikacji.</string>
     <string name="about_choose_your_avatar">Wybierz swój Awatar</string>
@@ -28,7 +28,7 @@
     <string name="about_forever_locked_to_this_device">Forever locked to this device</string>
     <string name="about_fuel_the_code">Fuel the Code</string>
     <string name="about_github_access">GitHub Access</string>
-    <string name="about_github_api_quota">GitHub API Quota</string>
+    <string name="about_github_api_quota">Limit API GitHub</string>
     <string name="about_global_top_contributors">Globalni najlepsi współtwórcy</string>
     <string name="about_hall_of_fame">Galeria\nSław</string>
     <string name="about_hall_of_fame_2">Galeria Sław</string>
@@ -43,8 +43,8 @@
     <string name="about_made_with_for_geeks">Zrobione z 💜 dla Maniaków</string>
     <string name="about_name_too_long_max_15_chars">Nazwa jest za długa (max. 15 znaków)</string>
     <string name="about_name_too_short_min_3_chars">Nazwa za krótka (min. 3 znaki)</string>
-    <string name="about_need_5_contributions">Potrzebne 5 wkładów</string>
-    <string name="about_no_token_set_rate_limited">No Token Set (Rate Limited)</string>
+    <string name="about_need_5_contributions">Potrzebne 5 kontrybucji</string>
+    <string name="about_no_token_set_rate_limited">Brak zestawu tokenów (Ograniczona częstotliwość zapytań)</string>
     <string name="about_nuclear_reset">Nuclear reset?</string>
     <string name="about_nuclear_reset_wipe_restart">NUCLEAR RESET (Wipe &amp; Restart)</string>
     <string name="about_open_ko_fi">Otwórz Ko-fi</string>
@@ -94,7 +94,7 @@
     <string name="about_whoa_you_can_only_join_once">Możesz dołączyć tylko raz co 24 godziny.</string>
     <string name="about_wipe_restart">Wipe &amp; Restart</string>
     <string name="about_writing_to_global_ledger">Writing to Global Ledger</string>
-    <string name="about_you_need_5_contributions_to_join">You need 5 contributions to join the Hall of Fame!</string>
+    <string name="about_you_need_5_contributions_to_join">Potrzebujesz 5 kontrybucji, aby dołączyć do Galerii Sławy!</string>
     <string name="about_you_re_in">Jesteś w!</string>
     <string name="about_your_alias_locked_after_first_save">Your Alias (locked after first save)</string>
     <string name="about_your_progress_failed_the_integrity_check">Twój postęp nie powiódł się z kontrolą integralności, więc nie może dołączyć do tablicy wyników.</string>
@@ -109,7 +109,7 @@
     <string name="apptracker_missing_args">Brakujące argumenty</string>
     <string name="apptracker_no_apk_path">Brak ścieżki do APK</string>
     <string name="apptracker_operation_failed_code">Operacja się nie powiodła (Kod %1$s): %2$s</string>
-    <string name="apptracker_revoke_failed_app_might_crash_or">Revoke failed. App might crash or restart.</string>
+    <string name="apptracker_revoke_failed_app_might_crash_or">Unieważnienie nie powiodło się. Aplikacja może się zawiesić lub zrestartować.</string>
     <string name="apptracker_shizuku_error_check_manifest_provider">Shizuku Error (Check Manifest/Provider): %1$s</string>
     <string name="apptracker_shizuku_is_not_running_start_shizuku">Shizuku NIE jest uruchomiony. Najpierw uruchom aplikację Shizuku.</string>
     <string name="apptracker_shizuku_not_running">Aplikacja Shizuku nie jest uruchomiona</string>
@@ -147,14 +147,14 @@
     <string name="common_update_v">Aktualizacja · v%1$s</string>
     <string name="community_15_at_least_3">%1$s/15 · przynajmniej 3</string>
     <string name="community_1_tap_check_releases_page_below">1. Kliknij \'Sprawdź stronę wydań\' poniżej.\n2. Idź do sekcji \'Zasoby\' najnowszej wersji.\n3. Zobacz na nazwę pliku APK.\n4. Skopiuj z niej unikalne słowo.\n\nPRZYKŁAD:\nPlik: \"app-release-arm64.apk\"\nKluczowe słowo: \"app-release\"\n\nJeśli plik nazywa się po prostu \"app.apk\" to użyj \"apk\".</string>
-    <string name="community_a_crate_of_coffee_fell_from">A crate of coffee fell from the Cloud Layer. Stamina restored.</string>
-    <string name="community_a_forum_troll_blocked_the_bridge">A Forum Troll blocked the bridge. You banned him permanently. The path is clear.</string>
+    <string name="community_a_crate_of_coffee_fell_from">Skrzynka kawy spadła z Warstwy Chmury. Wytrzymałość przywrócona.</string>
+    <string name="community_a_forum_troll_blocked_the_bridge">Forumowy Troll zablokował most. Zbanowałeś go na stałe. Droga jest czysta.</string>
     <string name="community_a_gate_that_only_opens_for">A gate that only opens for clean diffs. You squash 47 commits into one. It creaks open.</string>
     <string name="community_a_regex_worked_on_the_first">A regex worked on the first try. Legends said it could not be done.</string>
     <string name="community_a_short_pitch_for_this_bundle">A short pitch for this bundle</string>
-    <string name="community_a_short_summary_users_will_read">A short summary users will read first.</string>
-    <string name="community_a_stray_bug_crossed_your_path">A stray bug crossed your path. Squashed. +5 XP.</string>
-    <string name="community_a_tiny_fork_named_orion_final">A tiny fork named orion-final-FINAL-v2 tried to bite you. You starred it out of pity.</string>
+    <string name="community_a_short_summary_users_will_read">Krótkie podsumowanie, które użytkownicy przeczytają pierwsze.</string>
+    <string name="community_a_stray_bug_crossed_your_path">Zbłąkany bug stał na twojej drodze. Zgnieciony. +5 XP.</string>
+    <string name="community_a_tiny_fork_named_orion_final">Malutki fork o nazwie orion-final-FINAL-v2 spróbował cię ugryźć. Dałeś mu gwiazdkę z litości.</string>
     <string name="community_a_wild_glitch_slime_appeared_you">A wild Glitch Slime appeared! You smashed it with a console log. +10 XP.</string>
     <string name="community_abyss_of_legacy">Abyss of Legacy</string>
     <string name="community_accept_the_quest">ZAAKCEPTUJ ZADANIE</string>
