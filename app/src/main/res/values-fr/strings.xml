@@ -19,7 +19,7 @@
     <string name="about_copy_the_upi_id_to_pay">Copiez l\'identifiant UPI pour payer depuis votre application</string>
     <string name="about_copy_token">Copier le jeton</string>
     <string name="about_copy_upi">Copier UPI</string>
-    <string name="about_deck_clean">Deck : propre</string>
+    <string name="about_deck_clean">Deck: propre</string>
     <string name="about_developer_tools">Outils de développement</string>
     <string name="about_edit_token">Modifier le jeton</string>
     <string name="about_error">Erreur : %1$s</string>
