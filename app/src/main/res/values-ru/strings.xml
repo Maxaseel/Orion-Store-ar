@@ -503,7 +503,7 @@
     <string name="gate_in_progress">В процессе</string>
     <string name="gate_join_the_community">Вступайте в сообщество</string>
     <string name="gate_mock_preview">Mock preview</string>
-    <string name="gate_no_engines_flagged_the_apk">No engines flagged the APK</string>
+    <string name="gate_no_engines_flagged_the_apk">Не отмечены движки APK</string>
     <string name="gate_open_virustotal_settings">Открыть настройки VirusTotal</string>
     <string name="gate_orion_store">Orion Store · %1$s</string>
     <string name="gate_preview_the_current_forced_update_state">Preview the current forced update state.</string>
@@ -1304,7 +1304,7 @@
     <string name="guide_announcements">Объявления</string>
     <string name="guide_screenshots">Скриншоты</string>
     <string name="guide_library">Библиотека</string>
-    <string name="guide_auto_update">Авто-обновление</string>
+    <string name="guide_auto_update">Автообновление</string>
     <string name="guide_janitor">Уборщик</string>
     <string name="guide_fonts">Шрифты</string>
     <string name="guide_signature">Подпись</string>
