@@ -46,7 +46,7 @@ jobs:
           fi
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" 'platform-tools' 'platforms;android-37' 'build-tools;37.0.0'
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 'platform-tools' 'platforms;android-37' 'build-tools;37.0.0'
 
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
