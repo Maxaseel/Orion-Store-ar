@@ -33,21 +33,6 @@ jobs:
           java-version: '21'
           cache: gradle
 
-      - name: Install Android 37 SDK packages
-        shell: bash
-        run: |
-          set -euo pipefail
-          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
-          if [[ -z "$SDKMANAGER" ]]; then
-            echo "sdkmanager was not found under $ANDROID_HOME/cmdline-tools" >&2
-            exit 1
-          fi
-          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
-          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses || true
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 'platform-tools' 'platforms;android-37' 'build-tools;37.0.0'
-
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
