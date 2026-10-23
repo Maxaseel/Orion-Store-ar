@@ -26,8 +26,8 @@
     <string name="about_error_parsing_cache">Error parsing cache</string>
     <string name="about_fame_gate">Fame Gate</string>
     <string name="about_forever_locked_to_this_device">Forever locked to this device</string>
-    <string name="about_fuel_the_code">Fuel the Code</string>
-    <string name="about_github_access">GitHub Access</string>
+    <string name="about_fuel_the_code">Заправьте Код</string>
+    <string name="about_github_access">Доступ к GitHub</string>
     <string name="about_github_api_quota">GitHub API квота</string>
     <string name="about_global_top_contributors">Глобальный топ запросчиков</string>
     <string name="about_hall_of_fame">Зал \nСлавы</string>
@@ -44,7 +44,7 @@
     <string name="about_name_too_long_max_15_chars">Имя слишком длинное (Макс. 15 символов)</string>
     <string name="about_name_too_short_min_3_chars">Имя слишком короткое (мин. 3 символа)</string>
     <string name="about_need_5_contributions">Нужно 5 запросов</string>
-    <string name="about_no_token_set_rate_limited">No Token Set (Rate Limited)</string>
+    <string name="about_no_token_set_rate_limited">Не вставлен токен (Рейт ограничен)</string>
     <string name="about_nuclear_reset">Ядерный сброс?</string>
     <string name="about_nuclear_reset_wipe_restart">ЯДЕРНЫЙ СБРОС (Вычистить и перезапустить)</string>
     <string name="about_open_ko_fi">Открыть Ko-fi</string>
