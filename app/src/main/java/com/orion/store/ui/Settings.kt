@@ -106,13 +106,14 @@ fun identityExport(s: Settings, favorites: List<String>, now: Long): String {
         put("isLegend", s.isLegend); put("isContributor", s.isContributor); put("isDevUnlocked", s.isDevUnlocked)
         put("theme", s.theme); put("palette", s.palette); put("appFont", s.appFont); put("customFonts", json.encodeToJsonElement(s.customFonts)); put("customPalettes", json.encodeToJsonElement(s.customPalettes)); put("storeLayout", s.storeLayout)
         put("isOled", s.isOled); put("hiddenTabs", json.encodeToJsonElement(s.hiddenTabs)); put("disableAnimations", s.disableAnimations)
-        put("compactMode", s.compactMode); put("showAppAbout", s.showAppAbout); put("bottomNavScale", jsNum(s.bottomNavScale)); put("highRefreshRate", s.highRefreshRate)
+        put("compactMode", s.compactMode); put("showAppAbout", s.showAppAbout); put("bottomNavScale", jsNum(s.bottomNavScale)); put("highRefreshRate", s.highRefreshRate); put("perfMode", s.perfMode)
         put("pullToRefreshCharacter", s.pullToRefreshCharacter); put("hapticEnabled", s.hapticEnabled); put("glassEffect", s.glassEffect)
         put("quickTiles", s.quickTiles?.let { json.encodeToJsonElement(it) } ?: JsonNull); put("settingsOrder", json.encodeToJsonElement(s.settingsOrder))
         put("autoUpdateEnabled", s.autoUpdateEnabled); put("wifiOnly", s.wifiOnly); put("stableOnly", s.stableOnly); put("deleteApk", s.deleteApk); put("useShizuku", s.useShizuku)
         put("installerPreference", s.installerPreference); put("installerPackage", s.installerPackage); put("installerLabel", s.installerLabel)
         put("useRemoteJson", s.useRemoteJson); put("loadLocalData", s.loadLocalData); put("appStreams", json.encodeToJsonElement(s.appStreams))
-        put("ignoredUpdates", json.encodeToJsonElement(s.ignoredUpdates)); put("userProfile", s.userProfile?.let { json.encodeToJsonElement(it) } ?: JsonNull)
+        put("ignoredUpdates", json.encodeToJsonElement(s.ignoredUpdates)); put("appManage", json.encodeToJsonElement(s.appManage)); put("skipOtherStores", s.skipOtherStores)
+        put("myAppsFilters", json.encodeToJsonElement(s.myAppsFilters)); put("userProfile", s.userProfile?.let { json.encodeToJsonElement(it) } ?: JsonNull)
         put("customBundles", json.encodeToJsonElement(s.customBundles)); put("removedBundleApps", json.encodeToJsonElement(s.removedBundleApps))
         put("extraBundleApps", json.encodeToJsonElement(s.extraBundleApps)); put("favorites", json.encodeToJsonElement(favorites)); put("timestamp", now)
     }
@@ -154,14 +155,15 @@ fun mergeIdentity(d: JsonObject, c: Settings): Settings =
         storeLayout = d.or("storeLayout", c.storeLayout), isOled = d.or("isOled", c.isOled), hiddenTabs = d.or("hiddenTabs", c.hiddenTabs),
         disableAnimations = d.or("disableAnimations", c.disableAnimations), compactMode = d.or("compactMode", c.compactMode), showAppAbout = d.or("showAppAbout", c.showAppAbout),
         bottomNavScale = d.or("bottomNavScale", c.bottomNavScale).takeIf { it.isFinite() } ?: c.bottomNavScale,
-        highRefreshRate = d.or("highRefreshRate", c.highRefreshRate), pullToRefreshCharacter = d.or("pullToRefreshCharacter", c.pullToRefreshCharacter),
+        highRefreshRate = d.or("highRefreshRate", c.highRefreshRate), perfMode = d.or("perfMode", c.perfMode), pullToRefreshCharacter = d.or("pullToRefreshCharacter", c.pullToRefreshCharacter),
         hapticEnabled = d.or("hapticEnabled", c.hapticEnabled), glassEffect = d.or("glassEffect", c.glassEffect),
         quickTiles = d.or("quickTiles", c.quickTiles), settingsOrder = d.or("settingsOrder", c.settingsOrder),
         autoUpdateEnabled = d.or("autoUpdateEnabled", c.autoUpdateEnabled), wifiOnly = d.or("wifiOnly", c.wifiOnly), stableOnly = d.or("stableOnly", c.stableOnly), deleteApk = d.or("deleteApk", c.deleteApk),
         useShizuku = d.or("useShizuku", c.useShizuku), installerPreference = d.or("installerPreference", c.installerPreference),
         installerPackage = d.or("installerPackage", c.installerPackage), installerLabel = d.or("installerLabel", c.installerLabel),
         useRemoteJson = d.or("useRemoteJson", c.useRemoteJson), loadLocalData = d.or("loadLocalData", c.loadLocalData),
-        appStreams = d.or("appStreams", c.appStreams), ignoredUpdates = d.or("ignoredUpdates", c.ignoredUpdates), userProfile = d.or("userProfile", c.userProfile),
+        appStreams = d.or("appStreams", c.appStreams), ignoredUpdates = d.or("ignoredUpdates", c.ignoredUpdates),
+        appManage = d.or("appManage", c.appManage), skipOtherStores = d.or("skipOtherStores", c.skipOtherStores), myAppsFilters = d.or("myAppsFilters", c.myAppsFilters), userProfile = d.or("userProfile", c.userProfile),
         customBundles = d.or("customBundles", c.customBundles), removedBundleApps = d.or("removedBundleApps", c.removedBundleApps),
         extraBundleApps = d.or("extraBundleApps", c.extraBundleApps),
     )
@@ -279,9 +281,9 @@ private fun Selectable(selected: Boolean, title: String, meta: String? = null, o
 /** Decorative MaterialShape that slowly turns; used behind hub tiles and page heroes. */
 @Composable
 private fun Spinner(shape: RoundedPolygon, color: Color, size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, periodMs: Int = 24_000) {
-    val still = LocalS.current.disableAnimations
+    val still = LocalS.current.calm
     val turn by rememberInfiniteTransition(label = "spin").animateFloat(0f, if (still) 0f else 360f, infiniteRepeatable(tween(periodMs, easing = LinearEasing)), label = "a")
-    Box(modifier.size(size).graphicsLayer { rotationZ = turn }.clip(shape.toShape()).background(color))
+    Box(modifier.size(size).graphicsLayer { rotationZ = turn }.background(color, shape.toShape()))
 }
 
 /** Quick Settings tile: rests as a rounded rectangle, turns into a filled pill when on. */
@@ -400,6 +402,9 @@ fun SettingsScreen(vm: MainViewModel) {
                             })
                         }
                         Toggle(Sym.Verified, "Stable releases only", "Skip Beta, Alpha and Nightly builds when a stable one exists", s.stableOnly) { vm.set { it.copy(stableOnly = !it.stableOnly) } }
+                        Toggle(Sym.FilterList, "Skip apps from other stores", "Apps installed by Play Store or another store leave My Apps and get no updates here. Bring one back from its page.", s.skipOtherStores) {
+                            vm.set { it.copy(skipOtherStores = !it.skipOtherStores) }
+                        }
                     }
                     "installer" -> {
                         Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -508,6 +513,19 @@ fun SettingsScreen(vm: MainViewModel) {
                             Toggle(Sym.AutoAwesome, "Material You", "Dynamic wallpaper colors (Android 12+)", s.materialYouEnabled) { vm.set { it.copy(materialYouEnabled = !it.materialYouEnabled) } }
                             SRow(Sym.FontDownload, "Font", fontLabel(s), onClick = { fontError = null; picker = "font" }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) { Text("Aa", style = MaterialTheme.typography.headlineSmallEmphasized); Chevron() }
+                            }
+                        }
+                        Text("Performance", Modifier.padding(start = 32.dp, top = 16.dp, bottom = 2.dp), style = MaterialTheme.typography.titleSmallEmphasized, color = tonal(LocalAccent.current).second)
+                        Text(if (s.perfMode == "auto") "Auto picks ${s.perf.replaceFirstChar { it.uppercase() }} for this phone. Lite stops decorative motion, Boost keeps more images ready."
+                            else "Lite stops decorative motion, Boost keeps more images ready. Image changes apply after a restart.", Modifier.padding(horizontal = 32.dp),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // One connected group across the page, the same 16dp margins as the groups below: no scrolling, nothing off to one side
+                        val modes = listOf("auto" to "Auto", "lite" to "Lite", "balanced" to "Balanced", "boost" to "Boost")
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
+                            modes.forEachIndexed { i, (id, label) ->
+                                ToggleButton(s.perfMode == id, { vm.haptic(H.SELECTION); vm.set { it.copy(perfMode = id) } }, Modifier.weight(if (id == "balanced") 1.3f else 1f),
+                                    shapes = when (i) { 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes(); modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes(); else -> ButtonGroupDefaults.connectedMiddleButtonShapes() },
+                                    contentPadding = PaddingValues(horizontal = 4.dp)) { Text(label, maxLines = 1) }
                             }
                         }
                         Section("Motion & feel") {
@@ -817,11 +835,12 @@ private fun QuickTilesSheet(vm: MainViewModel, s: Settings, onDismiss: () -> Uni
 private fun Bento(vm: MainViewModel, cat: Cat, shared: @Composable (Cat) -> Modifier, modifier: Modifier, compact: Boolean = false, badge: String? = null, extra: @Composable ColumnScope.() -> Unit = {}) {
     val (bg, fg) = tonal(cat.color)
     Box(modifier.then(shared(cat)).springClick(RoundedCornerShape(28.dp)) { vm.haptic(H.LIGHT); vm.settingsMenu = cat.id }.background(bg)) {
-        Spinner(cat.shape, fg.copy(.1f), if (compact) 120.dp else 168.dp, Modifier.align(Alignment.BottomEnd).offset(36.dp, 36.dp))
+        // Short tiles (the full-width Developer strip) get the small shape, so it hugs the corner like the others instead of filling the strip
+        Spinner(cat.shape, fg.copy(.1f), if (compact || cat.id == "developer") 120.dp else 168.dp, Modifier.align(Alignment.BottomEnd).offset(36.dp, 36.dp))
         CompositionLocalProvider(LocalContentColor provides fg) {
             Column(Modifier.fillMaxSize().padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp).clip(cat.shape.toShape()).background(fg.copy(.14f)), contentAlignment = Alignment.Center) { Icon(cat.icon, null, Modifier.size(24.dp)) }
+                    Box(Modifier.size(44.dp).background(fg.copy(.14f), cat.shape.toShape()), contentAlignment = Alignment.Center) { Icon(cat.icon, null, Modifier.size(24.dp)) }
                     Spacer(Modifier.weight(1f))
                     badge?.let { Badge(containerColor = fg, contentColor = bg) { Text(it, Modifier.padding(horizontal = 4.dp)) } }
                 }

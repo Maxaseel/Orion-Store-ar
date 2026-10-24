@@ -101,11 +101,11 @@ fun BadgeChip(id: String, onClick: () -> Unit) {
 /** Developer coin: flips to the Hall of Fame; a burst halo turns behind it and showcased badges orbit around. */
 @Composable
 private fun DevCoin(vm: MainViewModel, profile: DevProfile, slots: List<String>, flipped: Boolean, onTap: () -> Unit) {
-    val cs = MaterialTheme.colorScheme; val still = LocalS.current.disableAnimations
+    val cs = MaterialTheme.colorScheme; val still = LocalS.current.calm
     val rot by animateFloatAsState(if (flipped) 180f else 0f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "flip")
     val spin by rememberInfiniteTransition(label = "halo").animateFloat(0f, if (still) 0f else 360f, infiniteRepeatable(tween(30_000, easing = LinearEasing)), label = "s")
     Box(Modifier.size(260.dp, 200.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(176.dp).graphicsLayer { rotationZ = spin }.clip(MaterialShapes.SoftBurst.toShape()).background(cs.primary.copy(.28f)))
+        Box(Modifier.size(176.dp).graphicsLayer { rotationZ = spin }.background(cs.primary.copy(.28f), MaterialShapes.SoftBurst.toShape()))
         slots.forEachIndexed { i, id ->
             val (ic, c) = BADGES[id] ?: return@forEachIndexed
             val (bg, fg) = tonal(c)
@@ -187,7 +187,7 @@ fun AboutTab(vm: MainViewModel, padding: PaddingValues) {
             val prog by animateFloatAsState(if (!shown) 0f else next?.let { ads / it.first.toFloat() } ?: 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "rank")
             Column(Modifier.fillMaxWidth().springClick(RoundedCornerShape(28.dp)) { vm.haptic(H.LIGHT); vm.open(Overlay.AD_DONATION) }.background(bg).padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(fg.copy(.14f)), contentAlignment = Alignment.Center) { Icon(rankIcon, null, tint = fg) }
+                    Box(Modifier.size(52.dp).background(fg.copy(.14f), MaterialShapes.Cookie9Sided.toShape()), contentAlignment = Alignment.Center) { Icon(rankIcon, null, tint = fg) }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Fuel the Code", style = MaterialTheme.typography.titleLargeEmphasized, color = fg)
@@ -426,7 +426,8 @@ fun LeaderboardSheet(vm: MainViewModel, onDismiss: () -> Unit, onSubmit: () -> U
                             .then(if (rank != null) Modifier.border(1.dp, rank, RoundedCornerShape(20.dp)) else Modifier).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("${i + 1}", Modifier.width(28.dp), textAlign = TextAlign.Center, style = if (i < 3) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Black, color = if (i < 3) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(.5f))
-                            AsyncImage(pngAvatar(e.avatar_url), e.username, Modifier.padding(horizontal = 10.dp).size(48.dp).clip(CircleShape).border(2.dp, if (i == 0) Color(0xFFFACC15) else MaterialTheme.colorScheme.surface, CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest))
+                            // Only the built-in avatars render: the list is public data, and one entry was pushed with an outside image
+                            AsyncImage(pngAvatar(e.avatar_url.takeIf { u -> CHARACTERS.any { it.url == u } } ?: CHARACTERS[0].url), e.username, Modifier.padding(horizontal = 10.dp).size(48.dp).clip(CircleShape).border(2.dp, if (i == 0) Color(0xFFFACC15) else MaterialTheme.colorScheme.surface, CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest))
                             Column(Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(e.username, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, false))

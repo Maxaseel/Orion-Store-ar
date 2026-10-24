@@ -12,6 +12,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -293,7 +297,7 @@ fun SectionTitle(title: String, modifier: Modifier = Modifier, subtitle: String?
 @Composable
 fun EmptyState(icon: ImageVector, title: String, body: String? = null, modifier: Modifier = Modifier) =
     Column(modifier.fillMaxWidth().padding(vertical = 64.dp, horizontal = 32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(96.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(96.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialShapes.Cookie9Sided.toShape()), contentAlignment = Alignment.Center) {
             Icon(icon, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(16.dp))
@@ -307,7 +311,7 @@ fun gradient(colors: List<String>, fb: List<Color>) = Brush.linearGradient(color
 fun SheetTitle(title: String, icon: ImageVector? = null, subtitle: String? = null) =
     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         icon?.let {
-            Box(Modifier.size(44.dp).clip(MaterialShapes.Cookie6Sided.toShape()).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).background(MaterialTheme.colorScheme.primaryContainer, MaterialShapes.Cookie6Sided.toShape()), contentAlignment = Alignment.Center) {
                 Icon(it, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Spacer(Modifier.width(14.dp))
@@ -330,7 +334,8 @@ fun OrionSheet(onDismiss: () -> Unit, dismissible: Boolean = true, content: @Com
     val dismiss by rememberUpdatedState(onDismiss)
     val close: () -> Unit = remember { { scope.launch { state.hide() }.invokeOnCompletion { dismiss() } } }
     ModalBottomSheet(onDismiss, sheetState = state, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-        CompositionLocalProvider(LocalSheetClose provides close) { content() }
+        // A sheet is its own window: shared elements can't measure across windows ("layouts are not part of the same hierarchy")
+        CompositionLocalProvider(LocalSheetClose provides close, LocalShared provides null) { content() }
     }
 }
 
@@ -383,7 +388,7 @@ fun MorphBlob(shapes: List<RoundedPolygon>, index: Int, size: Dp, color: Color, 
     LaunchedEffect(index) { if (index != to) { from = to; to = index; prog.snapTo(0f); prog.animateTo(1f, spec) } }
     val morph = remember(from, to) { Morph(shapes[from % shapes.size], shapes[to % shapes.size]) }
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
-        Box(Modifier.matchParentSize().graphicsLayer { rotationZ = (to + prog.value - 1) * 90f }.clip(MorphShape(morph, prog.value)).background(color))
+        Box(Modifier.matchParentSize().graphicsLayer { rotationZ = (to + prog.value - 1) * 90f }.background(color, MorphShape(morph, prog.value)))
         content()
     }
 }
@@ -406,7 +411,7 @@ fun TonalIcon(icon: ImageVector, c: Color) {
 /** Device tilt from the gravity sensor, low-pass filtered, in roughly -1..1 per axis. Read it inside graphicsLayer/draw lambdas so it only redraws. */
 @Composable
 fun rememberTilt(): State<Offset> {
-    val ctx = LocalContext.current; val off = LocalS.current.disableAnimations
+    val ctx = LocalContext.current; val off = LocalS.current.calm
     val tilt = remember { mutableStateOf(Offset.Zero) }
     DisposableEffect(off) {
         val sm = ctx.getSystemService(android.hardware.SensorManager::class.java)
@@ -467,3 +472,22 @@ fun ThemeRevealHost(content: @Composable () -> Unit) {
 
 /** Center of this element in root coordinates, for reveal origins. */
 fun Modifier.trackCenter(into: MutableState<Offset>) = onGloballyPositioned { into.value = it.boundsInRoot().center }
+
+/** TV: a full-screen overlay pulls D-pad focus in and keeps it. Otherwise the remote keeps moving through the screen underneath,
+ *  so the overlay never scrolls. */
+@Composable
+fun Modifier.trapFocus(): Modifier {
+    if (!Device.isTv) return this
+    val fr = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; runCatching { fr.requestFocus() } }
+    return focusRequester(fr).focusProperties { onExit = { cancelFocusChange() } }.focusGroup()
+}
+
+/** Lets a horizontal scroller inside a column padded by [h] run to the screen edges. Follow it with horizontalScroll and then
+ *  padding(horizontal = h), so the first item still lines up with the column. */
+fun Modifier.bleed(h: androidx.compose.ui.unit.Dp) = layout { m, c ->
+    val px = h.roundToPx()
+    val wide = if (c.hasBoundedWidth) c.copy(minWidth = c.minWidth + 2 * px, maxWidth = c.maxWidth + 2 * px) else c
+    val p = m.measure(wide)
+    layout(if (c.hasBoundedWidth) p.width - 2 * px else p.width, p.height) { p.place(if (c.hasBoundedWidth) -px else 0, 0) }
+}

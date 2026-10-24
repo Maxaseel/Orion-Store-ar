@@ -55,10 +55,12 @@ class MainActivity : ComponentActivity() {
         ResultHost.launch = { i, cb -> pending = cb; results.launch(i) }
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notifPerm.launch(Manifest.permission.POST_NOTIFICATIONS)
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) { Store.settings.flow.map { it.highRefreshRate }.distinctUntilChanged().collect { vm.tracker.setHighRefreshRate(this@MainActivity, it) } }
+            repeatOnLifecycle(Lifecycle.State.STARTED) { Store.settings.flow.map { it.highRefreshRate || it.perf == "boost" }.distinctUntilChanged().collect { vm.tracker.setHighRefreshRate(this@MainActivity, it) } }
         }
         if (savedInstanceState == null) handle(intent)
         setContent { OrionRoot(vm) }
+        // Compose paints every pixel from the first frame on, so the window background underneath is never seen: drop it to save a full-screen fill per frame
+        window.decorView.post { window.setBackgroundDrawable(null) }
     }
 
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); handle(intent) }
