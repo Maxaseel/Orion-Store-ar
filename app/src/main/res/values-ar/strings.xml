@@ -1195,7 +1195,7 @@
     <string name="vm_all_updates_completed">اكتملت جميع التحديثات.</string>
     <string name="vm_already_a_developer">أنت بالفعل مطور.</string>
     <string name="vm_apk_could_not_be_deleted">تعذر حذف ملف APK.</string>
-    <string name="vm_app">تطبيق '%1$s' %2$s</string>
+    <string name="vm_app">تطبيق «%1$s» %2$s</string>
     <string name="vm_app_caches_cleared">تم مسح ذاكرات التخزين المؤقت للتطبيقات</string>
     <string name="vm_apps_were_updated_in_the_background">تم تحديث %1$s تطبيقات في الخلفية</string>
     <string name="vm_chapter_2_of_fuel_the_code">الفصل 2 من "تغذية الكود" متاح.</string>
