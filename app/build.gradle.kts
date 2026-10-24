@@ -17,6 +17,7 @@ android {
         targetSdk = 36
         versionCode = 28
         versionName = "2.2.0"
+        buildConfigField("boolean", "ORION_FORK_BUILD", "true")
     }
     signingConfigs {
         if (keystore != null) create("release") {

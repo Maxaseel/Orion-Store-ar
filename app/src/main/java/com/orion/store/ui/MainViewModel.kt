@@ -409,6 +409,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun evaluateStoreUpdate(c: StoreConfig) {
+        if (com.orion.store.BuildConfig.ORION_FORK_BUILD) {
+            forcedJob?.cancel()
+            storeUpdateAvailable = false
+            forcedUrl = ""
+            fBypassed = false
+            fStatus = "inactive"
+            fText = ""
+            fError = ""
+            fExportPath = ""
+            fResult = null
+            clearSnap()
+            return
+        }
         if (fStatus in FORCED_GUARD) { c.storeDownloadUrl?.ifEmpty { null }?.let { forcedUrl = it }; return }
         storeUpdateAvailable = false; forcedUrl = ""
         val latest = c.latestStoreVersion?.ifEmpty { null } ?: c.minStoreVersion?.ifEmpty { null }
