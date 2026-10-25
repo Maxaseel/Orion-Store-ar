@@ -669,7 +669,7 @@ private fun Hub(vm: MainViewModel, s: Settings, d: DataState, active: Int, ready
                         showLanguage = false
                         Lang.set(context, tag)
                         if (android.os.Build.VERSION.SDK_INT < 33) context.findActivity()?.recreate()
-                    }, modifier = Modifier.fillMaxWidth()) { Text(uiText(label) }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(uiText(label)) }
                 }
             } },
             confirmButton = { TextButton(onClick = { showLanguage = false }) { Text(if (arabic) "إغلاق" else "Close") } }

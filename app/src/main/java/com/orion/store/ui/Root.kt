@@ -111,7 +111,7 @@ private fun Home(vm: MainViewModel) {
                 if (s.aiButton) AiStarFace(vm, Modifier.padding(vertical = 8.dp))
             }) {
                 Spacer(Modifier.weight(1f))
-                items.forEach { n -> NavigationRailItem(vm.tab == n.tab, { vm.navTo(n.tab) }, { NavIcon(n, vm.tab == n.tab, updateCount) }, label = { Text(uiText(n.label) }) }
+                items.forEach { n -> NavigationRailItem(vm.tab == n.tab, { vm.navTo(n.tab) }, { NavIcon(n, vm.tab == n.tab, updateCount) }, label = { Text(uiText(n.label)) }) }
                 Spacer(Modifier.weight(1f))
             }
         }

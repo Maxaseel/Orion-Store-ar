@@ -261,7 +261,7 @@
     <string name="community_leviathan_untangled">Leviathan Untangled!</string>
     <string name="community_lightning_bolt">Lightning Bolt</string>
     <string name="community_link_people_straight_to_this_app">Link people straight to this app in Orion</string>
-    <string name="community_listen_to_me_the_entropy_legion">"“Listen to me! The Entropy Legion has breached the firewall. They're corrupting the source code! I can't hold them back alone. I need you to channel the energy "</string>
+    <string name="community_listen_to_me_the_entropy_legion">"“Listen to me! The Entropy Legion has breached the firewall. They\'re corrupting the source code! I can\'t hold them back alone. I need you to channel the energy "</string>
     <string name="community_loading_boss_assets">Loading boss assets...</string>
     <string name="community_loot_found">Loot Found</string>
     <string name="community_lucky_find">Lucky Find</string>
@@ -1367,10 +1367,10 @@ Fame</string>
     <string name="ui_text_static_004">com.example.app</string>
     <string name="ui_text_static_005">Cancel</string>
     <string name="ui_text_static_006">Reconnect</string>
-    <string name="ui_text_static_007">It's quiet... too quiet.</string>
+    <string name="ui_text_static_007">It\'s quiet... too quiet.</string>
     <string name="ui_text_static_008"> Alias Secured</string>
     <string name="ui_text_static_009"> Simulate Protocol (Debug)</string>
-    <string name="ui_text_static_010">You're In!</string>
+    <string name="ui_text_static_010">You\'re In!</string>
     <string name="ui_text_static_011">Orion AI</string>
     <string name="ui_text_static_012">Stopped</string>
     <string name="ui_text_static_013">Open</string>
@@ -1397,7 +1397,7 @@ Fame</string>
     <string name="ui_text_static_034">Target:</string>
     <string name="ui_text_static_035">Control</string>
     <string name="ui_text_static_036">DEV</string>
-    <string name="ui_text_static_037">That's all of Orion</string>
+    <string name="ui_text_static_037">That\'s all of Orion</string>
     <string name="ui_text_static_038">Queue</string>
     <string name="ui_text_static_039">Style</string>
     <string name="ui_text_static_040">Name</string>
@@ -1423,7 +1423,7 @@ Fame</string>
     <string name="ui_text_static_060">Large</string>
     <string name="ui_text_static_061">https://example.com/config.json</string>
     <string name="ui_text_static_062">Active: </string>
-    <string name="ui_text_static_063">Orion's notification walks you through each step and moves on by itself.</string>
+    <string name="ui_text_static_063">Orion\'s notification walks you through each step and moves on by itself.</string>
     <string name="ui_text_static_064">Pair</string>
     <string name="ui_text_static_065">Loading...</string>
     <string name="ui_text_static_066">System</string>
@@ -1435,14 +1435,14 @@ Fame</string>
     <string name="ui_text_static_072">Guardian</string>
     <string name="ui_text_static_073">Allowed to use</string>
     <string name="ui_text_static_074">Revoke</string>
-    <string name="ui_text_static_075">Saves this app's APK to your Downloads folder.</string>
+    <string name="ui_text_static_075">Saves this app\'s APK to your Downloads folder.</string>
     <string name="ui_text_static_076">Careful with system apps</string>
     <string name="ui_text_static_077">Some keep your phone running. Removing the wrong one can break features or stop the phone from starting. Anything removed can be restored here.</string>
     <string name="ui_text_static_078">I understand</string>
     <string name="ui_text_static_079">Back</string>
-    <string name="ui_text_static_080">Sentinel's analysis uses a global threat database. While powerful, automated systems can sometimes produce false positives. This means a flagged file may not actually be malicious. We strongly recommend you verify these findings before taking action.</string>
-    <string name="ui_text_static_081">Search for the file's hash (use the copy button) online. Communities like Reddit often have discussions about specific files.</string>
-    <string name="ui_text_static_082">Sentinel needs permission to scan your device's storage for threats.</string>
+    <string name="ui_text_static_080">Sentinel\'s analysis uses a global threat database. While powerful, automated systems can sometimes produce false positives. This means a flagged file may not actually be malicious. We strongly recommend you verify these findings before taking action.</string>
+    <string name="ui_text_static_081">Search for the file\'s hash (use the copy button) online. Communities like Reddit often have discussions about specific files.</string>
+    <string name="ui_text_static_082">Sentinel needs permission to scan your device\'s storage for threats.</string>
     <string name="ui_text_static_083">Return</string>
     <string name="ui_text_static_084">Rescan</string>
 </resources>
