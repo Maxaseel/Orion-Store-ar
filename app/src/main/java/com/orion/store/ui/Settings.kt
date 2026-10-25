@@ -221,6 +221,7 @@ private val CATS = listOf(
     Cat("storage", Sym.CleaningServices, Orange, "Storage", "Janitor and saved APKs", MaterialShapes.Sunny),
     Cat("installer", Sym.Shield, Green, "Orion Xtra", "Guardian, Sentinel and installer", MaterialShapes.Gem),
     Cat("identity", Sym.Backup, Pink, "Backup", "Save or restore your identity", MaterialShapes.Cookie6Sided),
+    Cat("security", Sym.Lock, Yellow, "Security", "Protect Orion with a PIN or fingerprint", MaterialShapes.SoftBurst),
     Cat("interface", Sym.ViewQuilt, Teal, "Interface", "Store layout and visible tabs", MaterialShapes.Pentagon),
     Cat("developer", Sym.Terminal, Yellow, "Developer", "Debug switches and tools", MaterialShapes.SoftBurst),
 )
@@ -346,6 +347,7 @@ fun SettingsScreen(vm: MainViewModel) {
             } else Page(cat, Modifier.sharedBounds(rememberSharedContentState("cat-${cat.id}"), avs, resizeMode = PAGE_RESIZE),
                 onBack = ::back) {
                 when (m) {
+                    "security" -> { LockSettings(vm, s) }
                     "identity" -> {
                         Section("Your data stays here") {
                             InfoCard("Save your progress to a file, or let Orion keep a copy in a cloud you pick. Nothing goes to an Orion server.", "Orion is serverless", Sym.CloudOff)

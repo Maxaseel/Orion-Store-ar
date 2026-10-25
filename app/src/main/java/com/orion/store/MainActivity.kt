@@ -17,6 +17,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.fragment.app.FragmentActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -26,16 +30,21 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.orion.store.platform.ResultHost
 import com.orion.store.ui.MainViewModel
+import com.orion.store.ui.AppLock
+import com.orion.store.ui.LockScreen
+import com.orion.store.ui.showBiometricPrompt
 import com.orion.store.ui.OrionRoot
 import com.orion.store.ui.Store
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Lang.wrap(newBase))
     private val vm: MainViewModel by viewModels()
     private var pending: ((Int, Intent?) -> Unit)? = null
+    private var locked by mutableStateOf(false)
+    private var stoppedAt = 0L
     private val results = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r -> pending?.also { pending = null }?.invoke(r.resultCode, r.data) }
     private val notifPerm = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
@@ -60,7 +69,13 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) { Store.settings.flow.map { it.highRefreshRate || it.perf == "boost" }.distinctUntilChanged().collect { vm.tracker.setHighRefreshRate(this@MainActivity, it) } }
         }
         if (savedInstanceState == null) handle(intent)
-        setContent { OrionRoot(vm) }
+        locked = shouldLockOnLaunch()
+        setContent {
+            if (locked) LockScreen(vm.s.lockMethod, AppLock.biometricAvailable(this),
+                onBiometric = { showBiometricPrompt(this) { if (it) unlock() } },
+                onUnlock = { pin -> AppLock.verify(this, pin).also { if (it) unlock() } })
+            else OrionRoot(vm)
+        }
         // Compose paints every pixel from the first frame on, so the window background underneath is never seen: drop it to save a full-screen fill per frame
         window.decorView.post { window.setBackgroundDrawable(null) }
     }
@@ -68,8 +83,20 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); handle(intent) }
 
     override fun onResume() { super.onResume(); vm.onResume() }
-    override fun onStart() { super.onStart(); AutoUpdate.uiVisible = true }
-    override fun onStop() { AutoUpdate.uiVisible = false; super.onStop() }
+    override fun onStart() {
+        super.onStart(); AutoUpdate.uiVisible = true
+        if (stoppedAt != 0L && shouldLockAfter(stoppedAt)) locked = true
+    }
+    override fun onPause() {
+        if (vm.s.lockEnabled && AppLock.hasPin(this) && vm.s.lockPolicy in setOf("screen_off", "leave_app")) locked = true
+        super.onPause()
+    }
+    override fun onStop() {
+        AutoUpdate.uiVisible = false
+        stoppedAt = System.currentTimeMillis()
+        if (vm.s.lockEnabled && AppLock.hasPin(this) && vm.s.lockPolicy == "app_close") locked = true
+        super.onStop()
+    }
 
     // Full screen: status bar stays hidden, a swipe from the top peeks it. Re-applied on focus since old APIs drop the flag.
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -91,6 +118,17 @@ class MainActivity : ComponentActivity() {
         val sideways = rot == Surface.ROTATION_90 || rot == Surface.ROTATION_270
         return (c.orientation == Configuration.ORIENTATION_LANDSCAPE) == sideways
     }
+
+
+    private fun shouldLockOnLaunch(): Boolean = vm.s.lockEnabled && AppLock.hasPin(this)
+    private fun shouldLockAfter(at: Long): Boolean {
+        if (!vm.s.lockEnabled || !AppLock.hasPin(this)) return false
+        return when (vm.s.lockPolicy) {
+            "timeout" -> System.currentTimeMillis() - at >= vm.s.lockTimeoutMinutes.coerceAtLeast(1) * 60_000L
+            else -> true
+        }
+    }
+    private fun unlock() { locked = false; stoppedAt = 0L }
 
     private fun handle(i: Intent?) {
         vm.deepLink(i?.data); vm.onNotificationIntent(i)

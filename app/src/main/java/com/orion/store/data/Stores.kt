@@ -75,6 +75,11 @@ import kotlin.math.max
     val highRefreshRate: Boolean = true,
     val pullToRefreshCharacter: String = "cat",
     val hapticEnabled: Boolean = true,
+    /** Optional app lock; hash and salt live in SharedPreferences, never in this model. */
+    val lockEnabled: Boolean = false,
+    val lockMethod: String = "pin",
+    val lockPolicy: String = "app_close",
+    val lockTimeoutMinutes: Int = 5,
     val glassEffect: Boolean = true,
     val isDevUnlocked: Boolean = false,
     val isLegend: Boolean = false,
