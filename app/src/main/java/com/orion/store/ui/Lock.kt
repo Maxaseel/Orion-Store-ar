@@ -81,7 +81,11 @@ fun LockScreen(method: String, biometricAvailable: Boolean, onBiometric: () -> U
                 isError = error, supportingText = if (error) ({ Text(stringResource(R.string.lock_incorrect_pin)) }) else null,
                 visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
             Spacer(Modifier.height(12.dp))
-            Button({ checking = true; error = !onUnlock(pin.toCharArray()); checking = false }, enabled = pin.isNotEmpty() && !checking, Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { checking = true; error = !onUnlock(pin.toCharArray()); checking = false },
+                enabled = pin.isNotEmpty() && !checking,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 if (checking) CircularProgressIndicator() else Text(stringResource(R.string.lock_unlock))
             }
         }

@@ -233,7 +233,7 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun SRow(icon: ImageVector, title: String, desc: String? = null, enabled: Boolean = true, onClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) =
+fun SRow(icon: ImageVector, title: String, desc: String? = null, enabled: Boolean = true, onClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) =
     ListItem(
         { Text(uiText(title), style = MaterialTheme.typography.titleMedium) },
         Modifier.clip(RoundedCornerShape(4.dp)).then(if (onClick != null) Modifier.clickable(enabled, onClick = onClick) else Modifier),
@@ -251,7 +251,7 @@ private fun Toggle(icon: ImageVector, title: String, desc: String, checked: Bool
 }
 
 @Composable
-private fun Chevron(meta: String? = null) = Row(verticalAlignment = Alignment.CenterVertically) {
+fun Chevron(meta: String? = null) = Row(verticalAlignment = Alignment.CenterVertically) {
     meta?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = tonal(LocalAccent.current).second, fontWeight = FontWeight.Bold) }
     Icon(Sym.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
 }
