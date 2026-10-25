@@ -803,6 +803,7 @@ private val DEFAULT_QUICK = listOf("autoUpdate", "wifiOnly", "haptics", "materia
 @Composable
 private fun QuickTilesSheet(vm: MainViewModel, s: Settings, onDismiss: () -> Unit) = OrionSheet(onDismiss) {
     val cs = MaterialTheme.colorScheme
+    val arabic = Lang.isArabic(LocalContext.current)
     fun pickedOf(st: Settings) = (st.quickTiles ?: DEFAULT_QUICK).filter { id -> QUICK.any { it.id == id && it.shown(st) } }
     val picked = pickedOf(s)
     var live by remember { mutableStateOf<List<String>?>(null) }; var dragging by remember { mutableStateOf<String?>(null) }

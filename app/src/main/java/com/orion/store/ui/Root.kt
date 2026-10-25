@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import com.orion.store.Lang
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.orion.store.R
 import com.orion.store.data.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -85,6 +84,7 @@ fun OrionRoot(vm: MainViewModel) {
             } } }
         } }
     }
+}
 }
 
 @Composable
